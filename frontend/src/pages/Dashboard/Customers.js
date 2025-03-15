@@ -57,7 +57,7 @@ const Customers = () => {
         fetch('http://localhost:5000/api/products/customers')
             .then(res => res.json())
             .then(products => setCustomers(products));
-    }, [customers]);
+    }, []);
 
     return (
         <section className='p-4 mt-16'>

@@ -383,54 +383,57 @@ const POS = () => {
     }
 
     return (
-        <div className="min-h-screen bg-background pb-6">
-        <motion.header className="bg-gray-900 text-white shadow-md p-4">
-            <div className="max-w-7xl mx-auto flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                    <ShoppingCart className="h-6 w-6 text-yellow-400" />
-                    <h1 className="text-xl font-bold text-white">Point of Sale</h1>
+        <div className="min-h-screen bg-gradient-to-br from-background to-background/95">
+            <motion.header className="bg-primary/95 text-white shadow-lg p-4 sticky top-0 z-50 backdrop-blur-sm">
+                <div className="max-w-7xl mx-auto flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                        <ShoppingCart className="h-6 w-6 text-white/90" />
+                        <h1 className="text-xl font-bold text-white">QuickMeds POS</h1>
+                    </div>
+                    <div className="flex items-center space-x-4">
+                        {cartQuantity > 0 && (
+                            <motion.div 
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                className="bg-white text-primary w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
+                            >
+                                {cartQuantity}
+                            </motion.div>
+                        )}
+                    </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                    {cartQuantity > 0 && (
-                        <motion.div 
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            className="bg-yellow-400 text-gray-900 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
-                        >
-                            {cartQuantity}
-                        </motion.div>
-                    )}
-                </div>
-            </div>
-        </motion.header>
+            </motion.header>
 
-
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-6">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="col-span-2">
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    <div className="lg:col-span-8">
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.4, delay: 0.1 }}
+                            className="space-y-6"
                         >
-                            <SearchBar 
-                                value={searchTerm} 
-                                onChange={setSearchTerm} 
-                                placeholder="Search products by name..." 
-                            />
-                            
-                            <CategoryFilter 
-                                activeCategory={activeCategory} 
-                                onCategoryChange={setActiveCategory} 
-                                categories={[
-                                    { id: 'All', name: 'All Products' },
-                                    { id: 'Pharmacy', name: 'Pharmacy' },
-                                    { id: 'Non-Pharmacy', name: 'Non-Pharmacy' }
-                                ]} 
-                            />
+                            <div className="flex flex-col sm:flex-row gap-4">
+                                <div className="flex-1">
+                                    <SearchBar 
+                                        value={searchTerm} 
+                                        onChange={setSearchTerm} 
+                                        placeholder="Search medicines and products..." 
+                                    />
+                                </div>
+                                <CategoryFilter 
+                                    activeCategory={activeCategory} 
+                                    onCategoryChange={setActiveCategory} 
+                                    categories={[
+                                        { id: 'All', name: 'All Products' },
+                                        { id: 'Pharmacy', name: 'Medicines' },
+                                        { id: 'Non-Pharmacy', name: 'Other Items' }
+                                    ]} 
+                                />
+                            </div>
 
-                            <div className="mb-4 flex items-center justify-between">
-                                <h2 className="text-lg font-semibold">
+                            <div className="flex items-center justify-between">
+                                <h2 className="text-lg font-semibold text-foreground/90">
                                     Available Products 
                                     <span className="ml-2 text-sm font-medium text-muted-foreground">
                                         ({filteredProducts.length})
@@ -438,9 +441,9 @@ const POS = () => {
                                 </h2>
                             </div>
 
-                            <div className="relative h-[calc(100vh-280px)] overflow-y-auto pr-1">
+                            <div className="relative h-[calc(100vh-240px)] overflow-y-auto rounded-xl">
                                 {filteredProducts.length === 0 ? (
-                                    <div className="glass-panel rounded-xl p-8 text-center">
+                                    <div className="glass-panel rounded-xl p-8 text-center bg-card/50 backdrop-blur-sm">
                                         <p className="text-muted-foreground">
                                             {searchTerm ? 
                                                 'No products found. Try a different search term.' : 
@@ -449,7 +452,7 @@ const POS = () => {
                                         </p>
                                     </div>
                                 ) : (
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 p-1">
                                         {filteredProducts.map(product => (
                                             <ProductCard 
                                                 key={product._id} 
@@ -467,95 +470,97 @@ const POS = () => {
                         initial={{ opacity: 0, x: 20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.4, delay: 0.2 }}
-                        className="glass-panel rounded-xl border border-border/50 shadow-sm p-6"
+                        className="lg:col-span-4 h-fit sticky top-24"
                     >
-                        <div className="flex items-center justify-between mb-6">
-                            <h2 className="text-lg font-semibold flex items-center">
-                                <ShoppingCart className="h-5 w-5 mr-2 text-primary" />
-                                Shopping Cart
-                            </h2>
-                            {cart.length > 0 && (
-                                <button 
-                                    onClick={clearCart} 
-                                    className="text-xs px-2 py-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded transition-colors duration-200"
-                                >
-                                    Clear cart
-                                </button>
-                            )}
-                        </div>
-                        
-                        <div className="mb-6">
-                            <label className="text-sm font-medium text-foreground">
-                                Customer Name
-                            </label>
-                            <input
-                                type="text"
-                                value={customerName}
-                                onChange={e => setCustomerName(e.target.value)}
-                                className="w-full mt-1 px-3 py-2 rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all duration-200"
-                                placeholder="Enter customer name"
-                            />
-                        </div>
-                        
-                        <div className="h-[calc(100vh-410px)] overflow-y-auto pr-1 mb-6">
-                            <AnimatePresence>
-                                {cart.length === 0 ? (
-                                    <motion.div 
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: 1 }}
-                                        className="text-center py-8"
+                        <div className="glass-panel rounded-xl border border-border/50 shadow-lg p-6 bg-card/50 backdrop-blur-sm">
+                            <div className="flex items-center justify-between mb-6">
+                                <h2 className="text-lg font-semibold flex items-center text-foreground/90">
+                                    <ShoppingCart className="h-5 w-5 mr-2 text-primary" />
+                                    Cart Summary
+                                </h2>
+                                {cart.length > 0 && (
+                                    <button 
+                                        onClick={clearCart} 
+                                        className="text-xs px-3 py-1.5 text-destructive bg-destructive/10 hover:bg-destructive/20 rounded-full transition-colors duration-200"
                                     >
-                                        <div className="w-16 h-16 rounded-full bg-muted mx-auto flex items-center justify-center mb-4">
-                                            <ShoppingCart className="h-8 w-8 text-muted-foreground" />
-                                        </div>
-                                        <p className="text-muted-foreground">
-                                            Your cart is empty.
-                                        </p>
-                                        <p className="text-sm text-muted-foreground mt-1">
-                                            Add products to get started.
-                                        </p>
-                                    </motion.div>
-                                ) : (
-                                    cart.map(item => (
-                                        <CartItem
-                                            key={item._id}
-                                            item={item}
-                                            onIncrease={increaseQuantity}
-                                            onDecrease={decreaseQuantity}
-                                            onRemove={removeFromCart}
-                                        />
-                                    ))
+                                        Clear All
+                                    </button>
                                 )}
-                            </AnimatePresence>
-                        </div>
-
-                        <div className="mt-auto pt-4 border-t border-border">
-                            <div className="flex justify-between items-baseline text-lg mb-6">
-                                <span className="font-medium">Total</span>
-                                <span className="font-bold">${totalAmount.toFixed(2)}</span>
                             </div>
                             
-                            <button
-                                onClick={submitOrder}
-                                disabled={cart.length === 0 || isSubmitting}
-                                className={`w-full flex items-center justify-center py-3 px-4 rounded-lg text-white font-medium transition-all duration-300 ${
-                                    cart.length === 0 || isSubmitting
-                                        ? 'bg-muted text-muted-foreground cursor-not-allowed'
-                                        : 'bg-primary hover:bg-primary/90 shadow-sm hover:shadow'
-                                }`}
-                            >
-                                {isSubmitting ? (
-                                    <div className="flex items-center">
-                                        <div className="w-5 h-5 border-2 border-white/30 border-t-white/90 rounded-full animate-spin mr-2"></div>
-                                        Processing...
-                                    </div>
-                                ) : (
-                                    <>
-                                        <Save className="h-5 w-5 mr-2" />
-                                        Submit Order
-                                    </>
-                                )}
-                            </button>
+                            <div className="mb-6">
+                                <label className="text-sm font-medium text-foreground/90 mb-1.5 block">
+                                    Customer Name
+                                </label>
+                                <input
+                                    type="text"
+                                    value={customerName}
+                                    onChange={e => setCustomerName(e.target.value)}
+                                    className="w-full px-3 py-2 rounded-lg border border-input bg-background/50 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all duration-200"
+                                    placeholder="Enter customer name"
+                                />
+                            </div>
+                            
+                            <div className="h-[calc(100vh-460px)] overflow-y-auto pr-1 mb-6">
+                                <AnimatePresence>
+                                    {cart.length === 0 ? (
+                                        <motion.div 
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            className="text-center py-8"
+                                        >
+                                            <div className="w-16 h-16 rounded-full bg-primary/10 mx-auto flex items-center justify-center mb-4">
+                                                <ShoppingCart className="h-8 w-8 text-primary/60" />
+                                            </div>
+                                            <p className="text-foreground/80 font-medium">
+                                                Your cart is empty
+                                            </p>
+                                            <p className="text-sm text-muted-foreground mt-1">
+                                                Add products to begin
+                                            </p>
+                                        </motion.div>
+                                    ) : (
+                                        cart.map(item => (
+                                            <CartItem
+                                                key={item._id}
+                                                item={item}
+                                                onIncrease={increaseQuantity}
+                                                onDecrease={decreaseQuantity}
+                                                onRemove={removeFromCart}
+                                            />
+                                        ))
+                                    )}
+                                </AnimatePresence>
+                            </div>
+
+                            <div className="mt-auto pt-4 border-t border-border/50">
+                                <div className="flex justify-between items-baseline text-lg mb-6">
+                                    <span className="font-medium text-foreground/90">Total Amount</span>
+                                    <span className="font-bold text-primary">${totalAmount.toFixed(2)}</span>
+                                </div>
+                                
+                                <button
+                                    onClick={submitOrder}
+                                    disabled={cart.length === 0 || isSubmitting}
+                                    className={`w-full flex items-center justify-center py-3 px-4 rounded-lg text-white font-medium transition-all duration-300 ${
+                                        cart.length === 0 || isSubmitting
+                                            ? 'bg-muted cursor-not-allowed'
+                                            : 'bg-primary hover:bg-primary/90 shadow-lg hover:shadow-xl hover:shadow-primary/20'
+                                    }`}
+                                >
+                                    {isSubmitting ? (
+                                        <div className="flex items-center">
+                                            <div className="w-5 h-5 border-2 border-white/30 border-t-white/90 rounded-full animate-spin mr-2"></div>
+                                            Processing...
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <Save className="h-5 w-5 mr-2" />
+                                            Complete Order
+                                        </>
+                                    )}
+                                </button>
+                            </div>
                         </div>
                     </motion.div>
                 </div>

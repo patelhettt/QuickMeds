@@ -6,7 +6,7 @@ const uri = `mongodb+srv://hett:diptesh79@quickmeds.f6ryx.mongodb.net/products?r
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
 async function run() {
-    const listsCollection = client.db('products').collection('lists');
+    const listsCollection = client.db('suppliers').collection('lists');
 
     try {
         await client.connect();

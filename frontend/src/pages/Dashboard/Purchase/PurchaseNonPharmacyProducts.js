@@ -59,7 +59,7 @@ const PurchaseNonPharmacyProducts = () => {
         const productDetails = { tradeName, genericName, strength, category, company, stock, packType, purchaseUnitType, purchasePackSize, packTp, unitTp, purchaseVatPercent, purchaseVatTaka, purchaseDiscountPercent, purchaseDiscountTaka, salesUnitType, salePackSize, packMrp, unitMrp, salesVatPercent, salesVatTaka, salesDiscountPercent, salesDiscountTaka, addedBy, addedToDbAt };
 
         // send data to server
-        fetch('https://stringlab-ims-server.herokuapp.com/api/purchases/nonPharmacy', {
+        fetch('http://localhost:5000/api/purchases/nonPharmacy', {
             method: 'POST',
             headers: {
                 'content-type': 'application/json'
@@ -79,10 +79,10 @@ const PurchaseNonPharmacyProducts = () => {
     const [nonPharmacyProducts, setNonPharmacyProducts] = useState([]);
 
     useEffect(() => {
-        fetch('https://stringlab-ims-server.herokuapp.com/api/purchases/nonPharmacy')
+        fetch('http://localhost:5000/api/purchases/nonPharmacy')
             .then(res => res.json())
             .then(products => setNonPharmacyProducts(products));
-    }, [nonPharmacyProducts]);
+    }, []);
 
     return (
         <section className='p-4 mt-16'>
@@ -254,7 +254,7 @@ const PurchaseNonPharmacyProducts = () => {
                                         <span className='flex items-center gap-x-1'>
                                             <EditButton />
                                             <DeleteButton
-                                                deleteApiLink='https://stringlab-ims-server.herokuapp.com/api/purchases/nonPharmacy/'
+                                                deleteApiLink='http://localhost:5000/api/purchases/nonPharmacy/'
                                                 itemId={product._id}
                                                 name={product.tradeName} />
                                         </span>

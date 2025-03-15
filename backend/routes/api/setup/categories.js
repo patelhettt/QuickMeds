@@ -23,7 +23,7 @@ async function connectToDatabase() {
 connectToDatabase();
 
 // Database collection
-const categoriesCollection = client.db('products').collection('categories');
+const categoriesCollection = client.db('setup').collection('categories');
 
 // GET all categories
 router.get('/', async (req, res) => {

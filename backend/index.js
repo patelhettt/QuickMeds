@@ -40,27 +40,31 @@ app.use('/api/products/nonPharmacy', require('./routes/api/products/nonPharmacy'
 app.use('/api/requestedItems/pharmacy', require('./routes/api/requestedItems/pharmacy'));
 app.use('/api/requestedItems/nonPharmacy', require('./routes/api/requestedItems/nonPharmacy'));
 
-// Orders API Routes
-app.use('/api/products/sales', require('./routes/api/orders/pharmacy'));
+// POS API Routes
+//app.use('/api/products/sales', require('./routes/api/orders/pharmacy'));
 //app.use('/api/orders/nonPharmacy', require('./routes/api/orders/nonPharmacy'));
 
+//Orders API Routes
+app.use('/api/orders/pharmacy', require('./routes/api/orders/pharmacy'));
+app.use('/api/orders/nonPharmacy', require('./routes/api/orders/nonPharmacy'));
+
 // Purchases API Routes
-app.use('/api/purchases/pharmacy', require('./routes/api/orders/pharmacy')); // Duplicate of /api/orders/pharmacy
-app.use('/api/purchases/nonPharmacy', require('./routes/api/orders/nonPharmacy')); // Duplicate of /api/orders/nonPharmacy
+app.use('/api/purchases/pharmacy', require('./routes/api/purchases/pharmacy')); 
+app.use('/api/purchases/nonPharmacy', require('./routes/api/purchases/nonPharmacy')); 
 
 // Setup API Routes
-app.use('/api/products/categories', require('./routes/api/setup/categories'));
-app.use('/api/products/companies', require('./routes/api/setup/companies'));
-app.use('/api/products/unitTypes', require('./routes/api/setup/unitTypes'));
+app.use('/api/setup/categories', require('./routes/api/setup/categories'));
+app.use('/api/setup/companies', require('./routes/api/setup/companies'));
+app.use('/api/setup/unitTypes', require('./routes/api/setup/unitTypes'));
 
 // Returns API Routes
 app.use('/api/returns/customers', require('./routes/api/returns/customersReturns'));
 app.use('/api/returns/expiresOrDamagesReturns', require('./routes/api/returns/expiresOrDamagesReturns'));
 
 // Suppliers API Routes
-app.use('/api/products/documents', require('./routes/api/suppliers/documents'));
-app.use('/api/products/lists', require('./routes/api/suppliers/lists'));
-app.use('/api/products/payments', require('./routes/api/suppliers/payments'));
+app.use('/api/suppliers/documents', require('./routes/api/suppliers/documents'));
+app.use('/api/suppliers/lists', require('./routes/api/suppliers/lists'));
+app.use('/api/suppliers/payments', require('./routes/api/suppliers/payments'));
 
 // Contact Us API Routes
 app.use('/api/contactUs', require('./routes/api/contactUs'));

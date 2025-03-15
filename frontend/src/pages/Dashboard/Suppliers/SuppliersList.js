@@ -38,7 +38,7 @@ const SuppliersList = () => {
         const supplierDetails = { name, phone, website, email, address, addedBy, addedTime, updatedBy, updatedTime };
 
         // send data to server
-        fetch('http://localhost:5000/api/products/lists', {
+        fetch('http://localhost:5000/api/suppliers/lists', {
             method: 'POST',
             headers: {
                 'content-type': 'application/json'
@@ -61,10 +61,10 @@ const SuppliersList = () => {
     const [suppliers, setSuppliers] = useState([]);
 
     useEffect(() => {
-        fetch('http://localhost:5000/api/products/lists')
+        fetch('http://localhost:5000/api/suppliers/lists')
             .then(res => res.json())
             .then(suppliers => setSuppliers(suppliers));
-    }, [suppliers]);
+    }, []);
 
     return (
         <section className='p-4 mt-16'>
@@ -133,7 +133,7 @@ const SuppliersList = () => {
                                     supplier?.updatedTime?.slice(0, 10),
                                     <span className='flex items-center gap-x-1'>
                                         <EditButton />
-                                        <DeleteButton deleteApiLink='http://localhost:5000/api/products/lists/' itemId={supplier._id} />
+                                        <DeleteButton deleteApiLink='http://localhost:5000/api/suppliers/lists/' itemId={supplier._id} />
                                     </span>
                                 ]
                             } />)

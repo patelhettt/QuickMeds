@@ -18,28 +18,28 @@ const EditButton = ({ id }) => {
     const [unitTypes, setUnitTypes] = useState([]);
 
     useEffect(() => {
-        fetch(`https://stringlab-ims-server.herokuapp.com/api/products/pharmacy/${id}`)
+        fetch(`http://localhost:5000/api/products/pharmacy/`)
             .then(res => res.json())
             .then(products => setPharmacyProduct(products));
-    }, [pharmacyProduct]);
+    }, []);
 
     useEffect(() => {
-        fetch('https://stringlab-ims-server.herokuapp.com/api/setup/categories')
+        fetch('http://localhost:5000/api/setup/categories')
             .then(res => res.json())
             .then(c => setCategories(c));
-    }, [categories]);
+    }, []);
 
     useEffect(() => {
-        fetch('https://stringlab-ims-server.herokuapp.com/api/setup/companies')
+        fetch('http://localhost:5000/api/setup/companies')
             .then(res => res.json())
             .then(c => setCompanies(c));
-    }, [companies]);
+    }, []);
 
     useEffect(() => {
-        fetch('https://stringlab-ims-server.herokuapp.com/api/setup/unitTypes')
+        fetch('http://localhost:5000/api/setup/unitTypes')
             .then(res => res.json())
             .then(ut => setUnitTypes(ut));
-    }, [unitTypes]);
+    }, []);
 
     const addNonPharmacyProduct = event => {
         event.preventDefault();
@@ -73,7 +73,7 @@ const EditButton = ({ id }) => {
         const productDetails = { tradeName, genericName, strength, category, company, stock, packType, purchaseUnitType, purchasePackSize, packTp, unitTp, purchaseVatPercent, purchaseVatTaka, purchaseDiscountPercent, purchaseDiscountTaka, salesUnitType, salePackSize, packMrp, unitMrp, salesVatPercent, salesVatTaka, salesDiscountPercent, salesDiscountTaka, addedBy, addedToDbAt };
 
         // send data to server
-        fetch('https://stringlab-ims-server.herokuapp.com/api/products/pharmacy', {
+        fetch('http://localhost:5000/api/products/pharmacy', {
             method: 'POST',
             headers: {
                 'content-type': 'application/json'

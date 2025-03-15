@@ -82,7 +82,7 @@ const NonPharmacyItems = () => {
         fetch('http://localhost:5000/api/requestedItems/nonPharmacy')
             .then(res => res.json())
             .then(products => setNonPharmacyRequestedItems(products));
-    }, [nonPharmacyRequestedItems]);
+    }, []);
 
     return (
         <section className='p-4 mt-16'>
