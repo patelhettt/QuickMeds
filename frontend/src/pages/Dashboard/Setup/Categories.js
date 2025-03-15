@@ -35,7 +35,7 @@ const Categories = () => {
         const categoryDetails = { name, description, addedBy, addedTime, updatedBy, updatedTime };
 
         // send data to server
-        fetch('http://localhost:5000/api/products/categories', {
+        fetch('http://localhost:5000/api/setup/categories', {
             method: 'POST',
             headers: {
                 'content-type': 'application/json'
@@ -51,10 +51,10 @@ const Categories = () => {
     const [categories, setCategories] = useState([]);
 
     useEffect(() => {
-        fetch('http://localhost:5000/api/products/categories')
+        fetch('http://localhost:5000/api/setup/categories')
             .then(res => res.json())
             .then(products => setCategories(products));
-    }, [categories]);
+    }, []);
 
     return (
         <section className='p-4 mt-16'>
@@ -121,7 +121,7 @@ const Categories = () => {
                                         <span className='flex items-center gap-x-1'>
                                             <EditButton />
                                             <DeleteButton
-                                                deleteApiLink='http://localhost:5000/api/products/categories/'
+                                                deleteApiLink='http://localhost:5000/api/setup/categories/'
                                                 itemId={category._id}
                                                 name={category.name} />
                                         </span>

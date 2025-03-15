@@ -136,67 +136,67 @@ const DashboardSummary = () => {
     }, [nonPharmacyProducts]);
 
     useEffect(() => {
-        fetch('http://localhost:5000/api/products/pharmacy')
+        fetch('http://localhost:5000/api/requestedItems/pharmacy')
             .then(res => res.json())
             .then(products => setPharmacyRequestedItems(products.length));
     }, [pharmacyRequestedItems]);
 
     useEffect(() => {
-        fetch('http://localhost:5000/api/products/nonPharmacy')
+        fetch('http://localhost:5000/api/requestedItems/nonPharmacy')
             .then(res => res.json())
             .then(products => setNonPharmacyRequestedItems(products.length));
     }, [nonPharmacyRequestedItems]);
 
     useEffect(() => {
-        fetch('http://localhost:5000/api/products/pharmacy')
+        fetch('http://localhost:5000/api/orders/pharmacy')
             .then(res => res.json())
             .then(products => setPharmacyOrders(products.length));
     }, [pharmacyOrders]);
 
     useEffect(() => {
-        fetch('http://localhost:5000/api/products/nonPharmacy')
+        fetch('http://localhost:5000/api/orders/nonPharmacy')
             .then(res => res.json())
             .then(products => setNonPharmacyOrders(products.length));
     }, [nonPharmacyOrders]);
 
     useEffect(() => {
-        fetch('http://localhost:5000/api/products/pharmacy')
+        fetch('http://localhost:5000/api/purchases/pharmacy')
             .then(res => res.json())
             .then(products => setPharmacyPurchases(products.length));
     }, [pharmacyPurchases]);
 
     useEffect(() => {
-        fetch('http://localhost:5000/api/products/nonPharmacy')
+        fetch('http://localhost:5000/api/purchases/nonPharmacy')
             .then(res => res.json())
             .then(products => setNonPharmacyPurchases(products.length));
     }, [nonPharmacyPurchases]);
 
     useEffect(() => {
-        fetch('http://localhost:5000/api/products/customers')
+        fetch('http://localhost:5000/api/returns/customers')
             .then(res => res.json())
             .then(products => setReturnsCustomers(products.length));
     }, [returnsCustomers]);
 
     useEffect(() => {
-        fetch('http://localhost:5000/api/products/expiresOrDamages')
+        fetch('http://localhost:5000/api/returns/expiresOrDamages')
             .then(res => res.json())
             .then(products => setReturnsExpiresOrDamages(products.length));
     }, [returnsExpiresOrDamages]);
 
     useEffect(() => {
-        fetch('http://localhost:5000/api/products/categories')
+        fetch('http://localhost:5000/api/setup/categories')
             .then(res => res.json())
             .then(products => setCategories(products.length));
     }, [categories]);
 
     useEffect(() => {
-        fetch('http://localhost:5000/api/products/unitTypes')
+        fetch('http://localhost:5000/api/setup/unitTypes')
             .then(res => res.json())
             .then(products => setUnitTypes(products.length));
     }, [unitTypes]);
 
     useEffect(() => {
-        fetch('http://localhost:5000/api/products/companies')
+        fetch('http://localhost:5000/api/setup/companies')
             .then(res => res.json())
             .then(products => setCompanies(products.length));
     }, [companies]);
@@ -214,19 +214,19 @@ const DashboardSummary = () => {
     }, [customers]);
 
     useEffect(() => {
-        fetch('http://localhost:5000/api/products/lists')
+        fetch('http://localhost:5000/api/suppliers/lists')
             .then(res => res.json())
             .then(products => setSuppliersLists(products.length));
     }, [suppliersLists]);
 
     useEffect(() => {
-        fetch('http://localhost:5000/api/products/payments')
+        fetch('http://localhost:5000/api/suppliers/payments')
             .then(res => res.json())
             .then(e => setSuppliersPayments(e.length));
     }, [suppliersPayments]);
 
     useEffect(() => {
-        fetch('http://localhost:5000/api/products/documents')
+        fetch('http://localhost:5000/api/suppliers/documents')
             .then(res => res.json())
             .then(e => setSuppliersDocuments(e.length));
     }, [suppliersDocuments]);

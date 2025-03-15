@@ -58,7 +58,7 @@ const PurchasePharmacyProducts = () => {
         const productDetails = { supplier, tradeName, category, strength, boxType, unitType, creator, createdAt };
 
         // send data to server
-        fetch('https://stringlab-ims-server.herokuapp.com/api/purchases/pharmacy', {
+        fetch('http://localhost:5000/api/purchases/pharmacy', {
             method: 'POST',
             headers: {
                 'content-type': 'application/json'
@@ -81,23 +81,23 @@ const PurchasePharmacyProducts = () => {
 
     // get categories data
     useEffect(() => {
-        fetch('https://stringlab-ims-server.herokuapp.com/api/setup/categories')
+        fetch('http://localhost:5000/api/setup/categories')
             .then(res => res.json())
             .then(c => setCategories(c));
-    }, [categories]);
+    }, []);
 
     // get unit types data
     useEffect(() => {
-        fetch('https://stringlab-ims-server.herokuapp.com/api/setup/unitTypes')
+        fetch('http://localhost:5000/api/setup/unitTypes')
             .then(res => res.json())
             .then(ut => setUnitTypes(ut));
-    }, [unitTypes]);
+    }, []);
 
     useEffect(() => {
-        fetch('https://stringlab-ims-server.herokuapp.com/api/purchases/pharmacy')
+        fetch('http://localhost:5000/api/purchases/pharmacy')
             .then(res => res.json())
             .then(products => setPharmacyProducts(products));
-    }, [pharmacyProducts]);
+    }, []);
 
     return (
         <section className='p-4 mt-16'>
@@ -123,9 +123,7 @@ const PurchasePharmacyProducts = () => {
                         <div className='grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1 mb-2'>
                             <Input title={'Trade Name'} type='text' placeholder='Trade name' name='tradeName' isRequired='required' />
                             <Select title={'Category'} name='category' isRequired='required' options={categories.map(c => c.name)} />
-
                             <Input title={'Strength'} type='text' placeholder='Strength' name='strength' isRequired='required' />
-
                             <Select title={'Box Type'} name='boxType' isRequired='required' />
                             <Select title={'Unit Type'} name='unitType' isRequired='required' options={unitTypes.map(u => u.name)} />
                         </div>
@@ -134,69 +132,59 @@ const PurchasePharmacyProducts = () => {
                             <div className="grid">
                                 <table className="table table-zebra table-compact">
                                     <thead>
-                                        {
-                                            modalTableHead1
-                                        }
+                                        {modalTableHead1}
                                     </thead>
                                     <tbody>
-                                        {
-                                            pharmacyProducts.map((product, index) =>
-                                                <TableRow
-                                                    key={product._id}
-                                                    tableRowsData={
-                                                        [
-                                                            index + 1,
-                                                            product.name,
-                                                            product.strength,
-                                                            product.company,
-                                                            product.category,
-                                                            product.packType,
-                                                            product.Tp,
-                                                        ]
-                                                    } />)
-                                        }
+                                        {pharmacyProducts.map((product, index) =>
+                                            <TableRow
+                                                key={product._id}
+                                                tableRowsData={[
+                                                    index + 1,
+                                                    product.name,
+                                                    product.strength,
+                                                    product.company,
+                                                    product.category,
+                                                    product.packType,
+                                                    product.Tp,
+                                                ]}
+                                            />
+                                        )}
                                     </tbody>
                                 </table>
-
                                 <SaveButton extraClass={'mt-4'} />
                             </div>
 
                             <div className="divider lg:divider-horizontal"></div>
 
                             <div className="grid">
-
                                 <table className="table table-zebra table-compact">
                                     <thead>
-                                        {
-                                            modalTableHead2
-                                        }
+                                        {modalTableHead2}
                                     </thead>
                                     <tbody>
-                                        {
-                                            pharmacyProducts.map((product, index) =>
-                                                <TableRow
-                                                    key={product._id}
-                                                    tableRowsData={
-                                                        [
-                                                            index + 1,
-                                                            product.name,
-                                                            product.strength,
-                                                            product.category,
-                                                            product.stock,
-                                                            product.quantity,
-                                                            product.totalTp,
-                                                            <span className='flex items-center gap-x-1'>
-                                                                <EditButton />
-                                                                <DeleteButton
-                                                                    deleteApiLink='https://stringlab-ims-server.herokuapp.com/api/orders/pharmacy/'
-                                                                    itemId={'pharmacyOrder._id'} />
-                                                            </span>
-                                                        ]
-                                                    } />)
-                                        }
+                                        {pharmacyProducts.map((product, index) =>
+                                            <TableRow
+                                                key={product._id}
+                                                tableRowsData={[
+                                                    index + 1,
+                                                    product.name,
+                                                    product.strength,
+                                                    product.category,
+                                                    product.stock,
+                                                    product.quantity,
+                                                    product.totalTp,
+                                                    <span className='flex items-center gap-x-1'>
+                                                        <EditButton />
+                                                        <DeleteButton
+                                                            deleteApiLink='http://localhost:5000/api/orders/pharmacy/'
+                                                            itemId={product._id}
+                                                        />
+                                                    </span>
+                                                ]}
+                                            />
+                                        )}
                                     </tbody>
                                 </table>
-
                                 <CancelButton extraClass={'mt-4'} />
                             </div>
                         </div>
@@ -299,7 +287,7 @@ const PurchasePharmacyProducts = () => {
                                         <span className='flex items-center gap-x-1'>
                                             <EditButton />
                                             <DeleteButton
-                                                deleteApiLink='https://stringlab-ims-server.herokuapp.com/api/purchases/pharmacy/'
+                                                deleteApiLink='http://localhost:5000/api/purchases/pharmacy/'
                                                 itemId={product._id}
                                                 name={product.tradeName} />
                                         </span>

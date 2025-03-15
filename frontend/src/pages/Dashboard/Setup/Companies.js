@@ -38,7 +38,7 @@ const Companies = () => {
         const productDetails = { name, phone, website, email, address, addedBy, addedTime, updatedBy, updatedTime };
 
         // send data to server
-        fetch('quickmeds-shard-00-02.f6ryx.mongodb.net:27017/api/products/companies', {
+        fetch('http://localhost:5000/api/setup/companies', {
             method: 'POST',
             headers: {
                 'content-type': 'application/json'
@@ -54,10 +54,10 @@ const Companies = () => {
     const [companies, setCompanies] = useState([]);
 
     useEffect(() => {
-        fetch('http://localhost:5000/api/products/companies')
+        fetch('http://localhost:5000/api/setup/companies')
             .then(res => res.json())
             .then(products => setCompanies(products));
-    }, [companies]);
+    }, []);
 
     return (
         <section className='p-4 mt-16'>
@@ -126,7 +126,7 @@ const Companies = () => {
                                     company?.UpdatedAt?.slice(0, 10),
                                     <span className='flex items-center gap-x-1'>
                                         <EditButton />
-                                        <DeleteButton deleteApiLink='http://localhost:5000/api/products/companies/'
+                                        <DeleteButton deleteApiLink='http://localhost:5000/api/setup/companies/'
                                             itemId={company._id}
                                             name={company.name} />
                                     </span>

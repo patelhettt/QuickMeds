@@ -6,7 +6,7 @@ const uri = `mongodb+srv://stringlab-ims-db-admin:uCETlFKjGyOQ6M4Y@cluster0.50yg
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
 async function run() {
-    const nonPharmacyOrdersCollection = client.db('orders').collection('nonPharmacy');
+    const nonPharmacyOrdersCollection = client.db('orders').collection('nonpharmacy');
 
     try {
         await client.connect();

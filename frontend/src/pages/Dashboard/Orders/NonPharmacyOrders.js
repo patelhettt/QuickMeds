@@ -57,7 +57,7 @@ const NonPharmacyOrders = () => {
         const productDetails = { supplier, tradeName, category, strength, boxType, unitType, creator, createdAt };
 
         // send data to server
-        fetch('https://stringlab-ims-server.herokuapp.com/api/orders/pharmacy', {
+        fetch('http://localhost:5000/api/orders/pharmacy', {
             method: 'POST',
             headers: {
                 'content-type': 'application/json'
@@ -81,31 +81,31 @@ const NonPharmacyOrders = () => {
 
     // get all non pharmacy orders
     useEffect(() => {
-        fetch('https://stringlab-ims-server.herokuapp.com/api/orders/pharmacy')
+        fetch('http://localhost:5000/api/orders/pharmacy')
             .then(res => res.json())
             .then(products => setNonPharmacyOrders(products));
-    }, [nonPharmacyOrders]);
+    }, []);
 
     // get categories data
     useEffect(() => {
-        fetch('https://stringlab-ims-server.herokuapp.com/api/setup/categories')
+        fetch('http://localhost:5000/api/setup/categories')
             .then(res => res.json())
             .then(c => setCategories(c));
-    }, [categories]);
+    }, []);
 
     // get all suppliers data
     useEffect(() => {
-        fetch('https://stringlab-ims-server.herokuapp.com/api/suppliers/lists')
+        fetch('http://localhost:5000/api/suppliers/lists')
             .then(res => res.json())
             .then(s => setSuppliers(s));
-    }, [suppliers]);
+    }, []);
 
     // get unit types data
     useEffect(() => {
-        fetch('https://stringlab-ims-server.herokuapp.com/api/setup/unitTypes')
+        fetch('http://localhost:5000/api/setup/unitTypes')
             .then(res => res.json())
             .then(ut => setUnitTypes(ut));
-    }, [unitTypes]);
+    }, []);
 
     return (
         <section className='p-4 mt-16'>
@@ -196,7 +196,7 @@ const NonPharmacyOrders = () => {
                                                             <span className='flex items-center gap-x-1'>
                                                                 <EditButton />
                                                                 <DeleteButton
-                                                                    deleteApiLink='https://stringlab-ims-server.herokuapp.com/api/orders/pharmacy/'
+                                                                    deleteApiLink='http://localhost:5000/api/orders/pharmacy/'
                                                                     itemId={'pharmacyOrder._id'} />
                                                             </span>
                                                         ]
@@ -239,7 +239,7 @@ const NonPharmacyOrders = () => {
                                         <span className='flex items-center gap-x-1'>
                                             <EditButton />
                                             <DeleteButton
-                                                deleteApiLink='https://stringlab-ims-server.herokuapp.com/api/orders/pharmacy/'
+                                                deleteApiLink='http://localhost:5000/api/orders/pharmacy/'
                                                 itemId={pharmacyOrder._id} name='Order' />
                                         </span>
                                     ]

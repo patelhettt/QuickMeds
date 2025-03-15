@@ -58,7 +58,7 @@ const SuppliersDocuments = () => {
         const productDetails = { tradeName, genericName, strength, category, company, stock, packType, purchaseUnitType, purchasePackSize, packTp, unitTp, purchaseVatPercent, purchaseVatTaka, purchaseDiscountPercent, purchaseDiscountTaka, salesUnitType, salePackSize, packMrp, unitMrp, salesVatPercent, salesVatTaka, salesDiscountPercent, salesDiscountTaka, addedBy, addedToDbAt };
 
         // send data to server
-        fetch('http://localhost:5000/api/products/documents', {
+        fetch('http://localhost:5000/api/suppliers/documents', {
             method: 'POST',
             headers: {
                 'content-type': 'application/json'
@@ -83,10 +83,10 @@ const SuppliersDocuments = () => {
     const [documents, setDocuments] = useState([]);
 
     useEffect(() => {
-        fetch('http://localhost:5000/api/products/documents')
+        fetch('http://localhost:5000/api/suppliers/documents')
             .then(res => res.json())
             .then(products => setDocuments(products));
-    }, [documents]);
+    }, []);
 
     return (
         <section className='p-4 mt-16'>
@@ -258,7 +258,7 @@ const SuppliersDocuments = () => {
                                         <span className='flex items-center gap-x-1'>
                                             <EditButton />
                                             <DeleteButton
-                                                deleteApiLink='http://localhost:5000/api/products/documents/'
+                                                deleteApiLink='http://localhost:5000/api/suppliers/documents/'
                                                 itemId={product._id} />
                                         </span>
                                     ]

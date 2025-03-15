@@ -82,7 +82,7 @@ const CustomersReturns = () => {
         fetch('http://localhost:5000/api/returns/customers')
             .then(res => res.json())
             .then(products => setCustomersReturns(products));
-    }, [customersReturns]);
+    }, []);
 
     return (
         <section className='p-4 mt-16'>

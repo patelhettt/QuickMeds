@@ -45,7 +45,7 @@ const Employees = () => {
             const employeeDetails = { name, phone, website, email, address, addedBy, addedTime, updatedBy, updatedTime };
 
             // Send data to the local backend server
-            const response = await fetch(`${API_URL}/api/procducts/employees`, {
+            const response = await fetch(`${API_URL}/api/products/employees`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

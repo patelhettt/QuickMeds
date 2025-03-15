@@ -16,7 +16,7 @@ import { toast } from 'react-toastify';
 import DashboardPageHeading from '../../../components/headings/DashboardPageHeading';
 import AddModal from '../../../components/modals/AddModal';
 
-const API_BASE_URL = 'http://localhost:5000/api/products/pharmacy'; // Update this to match your backend
+const API_BASE_URL = 'http://localhost:5000/api/products/pharmacy'; 
 
 const NonPharmacyProducts = () => {
     const [pharmacyProducts, setPharmacyProducts] = useState([]);

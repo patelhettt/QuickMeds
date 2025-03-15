@@ -82,7 +82,7 @@ const ExpiresOrDamagesReturns = () => {
         fetch('http://localhost:5000/api/returns/expiresOrDamagesReturns')
             .then(res => res.json())
             .then(products => setExpiresOrDamagesReturns(products));
-    }, [expiresOrDamagesReturns]);
+    }, []);
 
     return (
         <section className='p-4 mt-16'>

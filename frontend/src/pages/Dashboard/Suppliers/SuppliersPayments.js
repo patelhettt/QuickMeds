@@ -27,10 +27,10 @@ const SuppliersPayments = () => {
     const [suppliersPayments, setSuppliersPayments] = useState([]);
 
     useEffect(() => {
-        fetch('http://localhost:5000/api/products/payments')
+        fetch('http://localhost:5000/api/suppliers/payments')
             .then(res => res.json())
             .then(products => setSuppliersPayments(products));
-    }, [suppliersPayments]);
+    }, []);
 
     return (
         <section className='p-4 mt-16'>

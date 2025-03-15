@@ -82,7 +82,7 @@ const PharmacyItems = () => {
         fetch('http://localhost:5000/api/requestedItems/pharmacy')
             .then(res => res.json())
             .then(products => setpharmacyItems(products));
-    }, [pharmacyItems]);
+    }, []);
 
     return (
         <section className='p-4 mt-16'>
