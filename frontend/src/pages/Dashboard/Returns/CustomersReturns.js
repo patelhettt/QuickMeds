@@ -8,8 +8,7 @@ import Select from '../../../components/form/Select';
 import DoubleInput from '../../../components/form/DoubleInput';
 import ModalCloseButton from '../../../components/buttons/ModalCloseButton';
 import ModalHeading from '../../../components/headings/ModalHeading';
-import { useState } from 'react';
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import RefreshButton from '../../../components/buttons/RefreshButton';
 import TableRow from '../../../components/TableRow';
 import EditButton from '../../../components/buttons/EditButton';
@@ -27,62 +26,85 @@ const CustomersReturns = () => {
         }
     </tr>;
 
-    const customerReturn = event => {
-        event.preventDefault();
-
-        const tradeName = event?.target?.tradeName?.value;
-        const genericName = event?.target?.genericName?.value;
-        const strength = event?.target?.strength?.value;
-        const category = event?.target?.category?.value;
-        const company = event?.target?.company?.value;
-        const stock = event?.target?.stock?.value;
-        const packType = event?.target?.packType?.value;
-        const purchaseUnitType = event?.target?.purchaseUnitType?.value;
-        const purchasePackSize = event?.target?.purchasePackSize?.value;
-        const packTp = event?.target?.packTp?.value;
-        const unitTp = event?.target?.unitTp?.value;
-        const purchaseVatPercent = event?.target?.purchaseVatPercent?.value;
-        const purchaseVatTaka = event?.target?.purchaseVatTaka?.value;
-        const purchaseDiscountPercent = event?.target?.purchaseDiscountPercent?.value;
-        const purchaseDiscountTaka = event?.target?.purchaseDiscountTaka?.value;
-        const salesUnitType = event?.target?.salesUnitType?.value;
-        const salePackSize = event?.target?.salePackSize?.value;
-        const packMrp = event?.target?.packMrp?.value;
-        const unitMrp = event?.target?.unitMrp?.value;
-        const salesVatPercent = event?.target?.salesVatPercent?.value;
-        const salesVatTaka = event?.target?.salesVatTaka?.value;
-        const salesDiscountPercent = event?.target?.salesDiscountPercent?.value;
-        const salesDiscountTaka = event?.target?.salesDiscountTaka?.value;
-        const addedBy = 'admin';
-        const addedToDbAt = new Date();
-
-        const productDetails = { tradeName, genericName, strength, category, company, stock, packType, purchaseUnitType, purchasePackSize, packTp, unitTp, purchaseVatPercent, purchaseVatTaka, purchaseDiscountPercent, purchaseDiscountTaka, salesUnitType, salePackSize, packMrp, unitMrp, salesVatPercent, salesVatTaka, salesDiscountPercent, salesDiscountTaka, addedBy, addedToDbAt };
-
-        // send data to server
-        fetch('http://localhost:5000/api/returns/customers', {
-            method: 'POST',
-            headers: {
-                'content-type': 'application/json'
-            },
-            body: JSON.stringify(productDetails)
-        })
-            .then(res => res.json())
-            .then(data => {
-                toast(
-                    <AddModal name={tradeName} />
-                );
-            });
-
-        event.target.reset();
-    };
-
     const [customersReturns, setCustomersReturns] = useState([]);
 
     useEffect(() => {
-        fetch('http://localhost:5000/api/returns/customers')
-            .then(res => res.json())
-            .then(products => setCustomersReturns(products));
+        let isSubscribed = true;
+
+        const fetchReturns = async () => {
+            try {
+                const response = await fetch('http://localhost:5000/api/returns/customers');
+                const data = await response.json();
+                if (isSubscribed) {
+                    setCustomersReturns(data);
+                }
+            } catch (error) {
+                console.error('Error fetching customer returns:', error);
+                if (isSubscribed) {
+                    setCustomersReturns([]);
+                }
+            }
+        };
+
+        fetchReturns();
+
+        return () => {
+            isSubscribed = false;
+        };
     }, []);
+
+    const customerReturn = async (event) => {
+        event.preventDefault();
+
+        const formData = {
+            tradeName: event?.target?.tradeName?.value,
+            genericName: event?.target?.genericName?.value,
+            strength: event?.target?.strength?.value,
+            category: event?.target?.category?.value,
+            company: event?.target?.company?.value,
+            stock: event?.target?.stock?.value,
+            packType: event?.target?.packType?.value,
+            purchaseUnitType: event?.target?.purchaseUnitType?.value,
+            purchasePackSize: event?.target?.purchasePackSize?.value,
+            packTp: event?.target?.packTp?.value,
+            unitTp: event?.target?.unitTp?.value,
+            purchaseVatPercent: event?.target?.purchaseVatPercent?.value,
+            purchaseVatTaka: event?.target?.purchaseVatTaka?.value,
+            purchaseDiscountPercent: event?.target?.purchaseDiscountPercent?.value,
+            purchaseDiscountTaka: event?.target?.purchaseDiscountTaka?.value,
+            salesUnitType: event?.target?.salesUnitType?.value,
+            salePackSize: event?.target?.salePackSize?.value,
+            packMrp: event?.target?.packMrp?.value,
+            unitMrp: event?.target?.unitMrp?.value,
+            salesVatPercent: event?.target?.salesVatPercent?.value,
+            salesVatTaka: event?.target?.salesVatTaka?.value,
+            salesDiscountPercent: event?.target?.salesDiscountPercent?.value,
+            salesDiscountTaka: event?.target?.salesDiscountTaka?.value,
+            addedBy: 'admin',
+            addedToDbAt: new Date()
+        };
+
+        try {
+            const response = await fetch('http://localhost:5000/api/returns/customers', {
+                method: 'POST',
+                headers: {
+                    'content-type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            });
+            
+            const data = await response.json();
+            if (data) {
+                toast(
+                    <AddModal name={formData.tradeName} />
+                );
+                event.target.reset();
+            }
+        } catch (error) {
+            console.error('Error submitting customer return:', error);
+            toast.error('Failed to submit customer return');
+        }
+    };
 
     return (
         <section className='p-4 mt-16'>
@@ -90,9 +112,9 @@ const CustomersReturns = () => {
                 name='Customers Returns'
                 value={customersReturns.length}
                 buttons={[
-                    <NewButton modalId='create-new-product' />,
-                    <RefreshButton />,
-                    <PrintButton />
+                    <NewButton key="new" modalId='create-new-product' />,
+                    <RefreshButton key="refresh" />,
+                    <PrintButton key="print" />
                 ]}
             />
 
@@ -121,7 +143,7 @@ const CustomersReturns = () => {
 
                                 <div className='grid grid-cols-2 gap-x-4'>
                                     <Select title={'Purchase Unit Type'} name='purchaseUnitType' isRequired='required' />
-                                    <Input title={'Pack Size'} type='number' placeholder='Pack size' name='packSize' isRequired='required' />
+                                    <Input title={'Pack Size'} type='number' placeholder='Pack size' name='purchasePackSize' isRequired='required' />
                                 </div>
 
                                 <div className='grid grid-cols-2 gap-x-4'>

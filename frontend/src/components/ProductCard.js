@@ -22,8 +22,8 @@ const ProductCard = ({ product, onAddToCart }) => {
           <div className="ml-2">
             <span className={`text-xs font-medium px-2 py-1 rounded-full ${
               product.type === 'Pharmacy' 
-                ? 'bg-accent text-accent-foreground' 
-                : 'bg-secondary text-secondary-foreground'
+                ? 'bg-secondary/20 text-secondary' 
+                : 'bg-primary/20 text-primary'
             }`}>
               {product.type}
             </span>
@@ -32,13 +32,13 @@ const ProductCard = ({ product, onAddToCart }) => {
         
         <div className="mt-4 flex items-center justify-between">
           <div>
-            <p className="text-lg font-semibold">${Number(productPrice).toFixed(2)}</p>
+            <p className="text-lg font-semibold text-primary">${Number(productPrice).toFixed(2)}</p>
             <p className={`text-xs mt-1 ${
               productStock < 5 && productStock > 0 
                 ? 'text-amber-600' 
                 : productStock <= 0 
-                  ? 'text-destructive' 
-                  : 'text-muted-foreground'
+                  ? 'text-red-500' 
+                  : 'text-gray-600'
             }`}>
               {productStock <= 0 
                 ? 'Out of stock' 
@@ -53,8 +53,8 @@ const ProductCard = ({ product, onAddToCart }) => {
             disabled={isOutOfStock}
             className={`btn-hover-effect rounded-full p-2 ${
               isOutOfStock 
-                ? 'bg-muted text-muted-foreground cursor-not-allowed' 
-                : 'bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-300'
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                : 'bg-primary text-white hover:bg-primary/90 transition-colors duration-300'
             }`}
             aria-label={`Add ${productName} to cart`}
           >

@@ -2,41 +2,68 @@ const express = require('express');
 const router = express.Router();
 const { User, Pharmacy } = require('../models/Pharmacy');
 
-// Get paginated User products
-// Get paginated User products or all products
+// Get paginated pharmacy products with search and filters
 router.get('/', async (req, res) => {
     try {
-        const { page = 1, limit = 20, all } = req.query;
+        const { 
+            page = 1, 
+            limit = 50, 
+            search = '', 
+            category = '',
+            sort = 'tradeName'
+        } = req.query;
 
-        if (all === 'true') {
-            // Fetch all products without pagination
-            const allProducts = await Pharmacy.find();
-            const total = await Pharmacy.countDocuments(); // Total count
-
-            return res.status(200).json({
-                data: allProducts,
-                totalItems: total
-            });
+        // Build query
+        let query = {};
+        
+        // Search functionality
+        if (search) {
+            query = {
+                $or: [
+                    { tradeName: { $regex: search, $options: 'i' } },
+                    { genericName: { $regex: search, $options: 'i' } },
+                    { company: { $regex: search, $options: 'i' } }
+                ]
+            };
         }
 
-        // Pagination logic
+        // Category filter
+        if (category && category !== 'All') {
+            query.category = category;
+        }
+
+        // Pagination setup
         const parsedPage = parseInt(page);
         const parsedLimit = parseInt(limit);
-
         const skip = (parsedPage - 1) * parsedLimit;
 
-        const UserProducts = await Pharmacy.find().skip(skip).limit(parsedLimit);
-        const total = await Pharmacy.countDocuments();
+        // Execute query with pagination
+        const [products, total] = await Promise.all([
+            Pharmacy.find(query)
+                .sort({ [sort]: 1 })
+                .skip(skip)
+                .limit(parsedLimit)
+                .lean(),
+            Pharmacy.countDocuments(query)
+        ]);
+
+        // Add hasMore flag
+        const hasMore = total > skip + products.length;
 
         res.status(200).json({
-            data: UserProducts,
+            data: products,
             currentPage: parsedPage,
             totalPages: Math.ceil(total / parsedLimit),
-            totalItems: total
+            totalItems: total,
+            hasMore,
+            itemsPerPage: parsedLimit
         });
     } catch (error) {
-        console.error('Error fetching User products:', error);
-        res.status(500).json({ error: error.message });
+        console.error('Error fetching pharmacy products:', error);
+        res.status(500).json({ 
+            error: 'Failed to fetch products',
+            details: error.message 
+        });
     }
 });
 
@@ -70,12 +97,12 @@ router.get('/unitTypes', async (req, res) => {
     }
 });
 
-// Get a User product by ID
+// Get a pharmacy product by ID
 router.get('/:id', async (req, res) => {
     try {
         const product = await Pharmacy.findById(req.params.id);
         if (!product) {
-            return res.status(404).json({ message: 'User product not found' });
+            return res.status(404).json({ message: 'Product not found' });
         }
         res.status(200).json(product);
     } catch (error) {
@@ -83,7 +110,7 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-// Add a new User product
+// Add a new pharmacy product
 router.post('/', async (req, res) => {
     try {
         const { tradeName, genericName, category, strength, company, stock, packType, packSize, packTp, unitTp, packMrp, unitMrp } = req.body;
@@ -116,7 +143,7 @@ router.post('/', async (req, res) => {
     }
 });
 
-// Update a User product
+// Update a pharmacy product
 router.put('/:id', async (req, res) => {
     try {
         const updatedProduct = await Pharmacy.findByIdAndUpdate(
@@ -126,7 +153,7 @@ router.put('/:id', async (req, res) => {
         );
 
         if (!updatedProduct) {
-            return res.status(404).json({ message: 'User product not found' });
+            return res.status(404).json({ message: 'Product not found' });
         }
         res.status(200).json(updatedProduct);
     } catch (error) {
@@ -134,14 +161,14 @@ router.put('/:id', async (req, res) => {
     }
 });
 
-// Delete a User product
+// Delete a pharmacy product
 router.delete('/:id', async (req, res) => {
     try {
         const deletedProduct = await Pharmacy.findByIdAndDelete(req.params.id);
         if (!deletedProduct) {
-            return res.status(404).json({ message: 'User product not found' });
+            return res.status(404).json({ message: 'Product not found' });
         }
-        res.status(200).json({ message: 'User product deleted successfully', deletedProduct });
+        res.status(200).json({ message: 'Product deleted successfully', deletedProduct });
     } catch (error) {
         res.status(400).json({ error: error.message });
     }

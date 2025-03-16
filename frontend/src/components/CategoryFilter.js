@@ -9,8 +9,8 @@ const CategoryFilter = ({ activeCategory, onCategoryChange, categories }) => {
             onClick={() => onCategoryChange(category.id)}
             className={`relative px-4 py-2.5 rounded-md text-sm font-medium transition-all duration-300 whitespace-nowrap ${
               activeCategory === category.id
-                ? 'text-primary-foreground'
-                : 'text-foreground/70 hover:text-foreground/90 hover:bg-secondary'
+                ? 'text-white'
+                : 'text-gray-600 hover:text-gray-800 hover:bg-secondary/10'
             }`}
           >
             {category.name}

@@ -41,8 +41,7 @@ app.use('/api/requestedItems/pharmacy', require('./routes/api/requestedItems/pha
 app.use('/api/requestedItems/nonPharmacy', require('./routes/api/requestedItems/nonPharmacy'));
 
 // POS API Routes
-//app.use('/api/products/sales', require('./routes/api/orders/pharmacy'));
-//app.use('/api/orders/nonPharmacy', require('./routes/api/orders/nonPharmacy'));
+app.use('/api/products/sales', require('./routes/api/products/sales'));
 
 //Orders API Routes
 app.use('/api/orders/pharmacy', require('./routes/api/orders/pharmacy'));
