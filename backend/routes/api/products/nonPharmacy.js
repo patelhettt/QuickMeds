@@ -1,48 +1,75 @@
 const express = require('express');
 const router = express.Router();
-const { NonPharmacy } = require('../models/NonPharmacy'); // Import the NonPharmacy model
+const { NonPharmacy } = require('../models/NonPharmacy');
 
-// Get paginated or all non-pharmacy products
+// Get paginated non-pharmacy products with search and filters
 router.get('/', async (req, res) => {
     try {
-        const { page = 1, limit = 20, all } = req.query;
+        const { 
+            page = 1, 
+            limit = 50, 
+            search = '', 
+            category = '',
+            sort = 'Product_name'
+        } = req.query;
 
-        if (all === 'true') {
-            // Fetch all non-pharmacy products without pagination
-            const allProducts = await NonPharmacy.find();
-            const total = await NonPharmacy.countDocuments(); // Total count
-
-            return res.status(200).json({
-                data: allProducts,
-                totalItems: total
-            });
+        // Build query
+        let query = {};
+        
+        // Search functionality
+        if (search) {
+            query = {
+                $or: [
+                    { Product_name: { $regex: search, $options: 'i' } },
+                    { Company: { $regex: search, $options: 'i' } }
+                ]
+            };
         }
 
-        // Pagination logic
+        // Category filter
+        if (category && category !== 'All') {
+            query.Category = category;
+        }
+
+        // Pagination setup
         const parsedPage = parseInt(page);
         const parsedLimit = parseInt(limit);
-
         const skip = (parsedPage - 1) * parsedLimit;
 
-        const products = await NonPharmacy.find().skip(skip).limit(parsedLimit);
-        const total = await NonPharmacy.countDocuments();
+        // Execute query with pagination
+        const [products, total] = await Promise.all([
+            NonPharmacy.find(query)
+                .sort({ [sort]: 1 })
+                .skip(skip)
+                .limit(parsedLimit)
+                .lean(),
+            NonPharmacy.countDocuments(query)
+        ]);
+
+        // Add hasMore flag
+        const hasMore = total > skip + products.length;
 
         res.status(200).json({
             data: products,
             currentPage: parsedPage,
             totalPages: Math.ceil(total / parsedLimit),
-            totalItems: total
+            totalItems: total,
+            hasMore,
+            itemsPerPage: parsedLimit
         });
     } catch (error) {
         console.error('Error fetching non-pharmacy products:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ 
+            error: 'Failed to fetch products',
+            details: error.message 
+        });
     }
 });
 
 // Get all unique categories
 router.get('/categories', async (req, res) => {
     try {
-        const categories = await NonPharmacy.distinct('category');
+        const categories = await NonPharmacy.distinct('Category');
         res.status(200).json(categories);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -52,7 +79,7 @@ router.get('/categories', async (req, res) => {
 // Get all unique companies
 router.get('/companies', async (req, res) => {
     try {
-        const companies = await NonPharmacy.distinct('company');
+        const companies = await NonPharmacy.distinct('Company');
         res.status(200).json(companies);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -64,7 +91,7 @@ router.get('/:id', async (req, res) => {
     try {
         const product = await NonPharmacy.findById(req.params.id);
         if (!product) {
-            return res.status(404).json({ message: 'Non-pharmacy product not found' });
+            return res.status(404).json({ message: 'Product not found' });
         }
         res.status(200).json(product);
     } catch (error) {
@@ -75,23 +102,18 @@ router.get('/:id', async (req, res) => {
 // Add a new non-pharmacy product
 router.post('/', async (req, res) => {
     try {
-        const { productName, category, company, stock, packType, packSize, packTp, unitTp, packMrp, unitMrp } = req.body;
+        const { Product_name, Category, Company, Stock, Unit_MRP } = req.body;
 
-        if (!productName || !category || !company || !stock) {
+        if (!Product_name || !Category || !Company || !Stock || !Unit_MRP) {
             return res.status(400).json({ error: 'Missing required fields' });
         }
 
         const newProduct = new NonPharmacy({
-            productName,
-            category,
-            company,
-            stock,
-            packType,
-            packSize,
-            packTp,
-            unitTp,
-            packMrp,
-            unitMrp,
+            Product_name,
+            Category,
+            Company,
+            Stock,
+            Unit_MRP,
             addedBy: 'admin',
             addedToDbAt: new Date(),
         });
@@ -113,7 +135,7 @@ router.put('/:id', async (req, res) => {
         );
 
         if (!updatedProduct) {
-            return res.status(404).json({ message: 'Non-pharmacy product not found' });
+            return res.status(404).json({ message: 'Product not found' });
         }
         res.status(200).json(updatedProduct);
     } catch (error) {
@@ -126,9 +148,9 @@ router.delete('/:id', async (req, res) => {
     try {
         const deletedProduct = await NonPharmacy.findByIdAndDelete(req.params.id);
         if (!deletedProduct) {
-            return res.status(404).json({ message: 'Non-pharmacy product not found' });
+            return res.status(404).json({ message: 'Product not found' });
         }
-        res.status(200).json({ message: 'Non-pharmacy product deleted successfully', deletedProduct });
+        res.status(200).json({ message: 'Product deleted successfully', deletedProduct });
     } catch (error) {
         res.status(400).json({ error: error.message });
     }
