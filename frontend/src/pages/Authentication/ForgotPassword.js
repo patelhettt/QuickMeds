@@ -1,41 +1,104 @@
-import React from 'react';
-import Button from '../../components/buttons/Button';
-import { useNavigate } from "react-router-dom";
+import React, { useState } from 'react';
+import { Link, useNavigate } from "react-router-dom";
+import { toast } from 'react-toastify';
+import { FaArrowLeft, FaEnvelope } from 'react-icons/fa';
+import { RiLockPasswordLine } from 'react-icons/ri';
+import { CgChevronDownR } from 'react-icons/cg';
 import Footer from '../../components/Footer';
 import DefaultNavbar from '../../components/DefaultNavbar';
 
 const ForgotPassword = () => {
     const navigate = useNavigate();
+    const [email, setEmail] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        if (!email) {
+            toast.error('Please enter your email address');
+            return;
+        }
+        
+        setIsLoading(true);
+        
+        // Simulate API call
+        setTimeout(() => {
+            toast.success('Password reset link sent to your email');
+            setIsLoading(false);
+            // In a real app, you would call an API endpoint here
+        }, 1500);
+    };
 
     return (
         <div>
             <DefaultNavbar />
-            <section className="max-w-screen-xl px-4 py-16 mx-auto sm:px-6 lg:px-8">
-                <div className="max-w-lg mx-auto text-center">
-                    <h1 className="text-2xl font-bold sm:text-3xl">Reset Your Password Here</h1>
+            <div className="text-accent">
+                <section className="hero min-h-screen bg-info">
+                    <div className="hero-content">
+                        <div className="max-w-md w-full">
+                            <div className="text-center mb-8">
+                                <button className="btn border-0 rounded-full bg-base-100 mb-4 text-accent px-8 font-bold text-md hover:bg-base-100">
+                                    <CgChevronDownR className='mr-4 text-xl text-secondary' />
+                                    Account Recovery
+                                </button>
+                                <h1 className="text-4xl font-bold"><span className="text-secondary">Reset</span> your password</h1>
+                                <p className="py-4 text-neutral">Enter your email address and we'll send you instructions to reset your password.</p>
+                            </div>
 
-                    <p className="mt-4 text-gray-500">
-                        Lorem ipsum dolor sit amet consectetur adipisicing elit. Et libero nulla
-                        eaque error neque ipsa culpa autem, at itaque nostrum!
-                    </p>
-                </div>
+                            <div className="card bg-base-100 shadow-xl">
+                                <div className="card-body">
+                                    <form onSubmit={handleSubmit} className="space-y-4">
+                                        <div className="form-control">
+                                            <label className="label">
+                                                <span className="label-text font-medium">Email Address</span>
+                                            </label>
+                                            <div className="relative">
+                                                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                                    <FaEnvelope className="text-gray-400" />
+                                                </div>
+                                                <input 
+                                                    type="email" 
+                                                    value={email}
+                                                    onChange={(e) => setEmail(e.target.value)}
+                                                    placeholder="Enter your email address" 
+                                                    className="input input-bordered w-full pl-10" 
+                                                    required
+                                                />
+                                            </div>
+                                        </div>
 
-                <form action="" className="max-w-md mx-auto mt-8 mb-0 space-y-4">
-                    <div className="form-control">
-                        <label className="label">
-                            <span className="label-text">Email</span>
-                        </label>
-                        <input type="email" placeholder="enter your email here" className="input input-bordered" />
+                                        <div className="form-control mt-6">
+                                            <button 
+                                                type="submit" 
+                                                className={`btn border-0 bg-secondary hover:bg-primary text-white w-full ${isLoading ? 'loading' : ''}`}
+                                                disabled={isLoading}
+                                            >
+                                                {isLoading ? 'Sending...' : 'Send Reset Link'}
+                                            </button>
+                                        </div>
+                                        
+                                        <div className="divider text-xs text-gray-400">OR</div>
+                                        
+                                        <div className="text-center">
+                                            <Link 
+                                                to="/login" 
+                                                className="inline-flex items-center text-secondary hover:text-primary transition-colors"
+                                            >
+                                                <FaArrowLeft className="mr-2" />
+                                                Back to Login
+                                            </Link>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                            
+                            <div className="mt-6 text-center text-sm">
+                                <p>Need help? <Link to="/contact" className="text-secondary hover:underline">Contact Support</Link></p>
+                            </div>
+                        </div>
                     </div>
-
-                    <div className="form-control mt-6">
-                        <p className='flex justify-between'>New to Inventory? <span onClick={() => navigate('/register')} className='text-[#F4E06D] underline'>Register Here</span></p>
-                    </div>
-
-                    <Button btnText={'Send Password Reset Link'} />
-                    <Button btnText={'Cancel'} />
-                </form>
-            </section>
+                </section>
+            </div>
             <Footer />
         </div>
     );

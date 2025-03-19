@@ -3,15 +3,10 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { Routes, Route } from "react-router-dom";
 import Home from './pages/Home';
-import Features from './pages/Features';
-import CustomerStories from './pages/CustomerStories';
-import FindExperts from './pages/FindExperts';
 import ForgotPassword from './pages/Authentication/ForgotPassword';
-import Integrations from './pages/Integrations';
 import Login from './pages/Authentication/Login';
 import Pricing from './pages/Pricing';
 import Register from './pages/Authentication/Register';
-import Resources from './pages/Resources';
 import NotFound from './pages/NotFound';
 import About from './pages/About';
 import Contact from './pages/Contact';
@@ -47,17 +42,12 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="home" element={<Home />} />
-        <Route path="features" element={<Features />} />
-        <Route path="customer-stories" element={<CustomerStories />} />
-        <Route path="find-experts" element={<FindExperts />} />
         <Route path="forgot-password" element={<ForgotPassword />} />
-        <Route path="integration" element={<Integrations />} />
         <Route path="login" element={<Login />} />
         <Route path="pricing" element={<Pricing />} />
         <Route path="register" element={<Register />} />
         <Route path="terms-and-conditions" element={<TermsAndConditions />} />
         <Route path="privacy-policy" element={<PrivacyPolicy />} />
-        <Route path="resources" element={<Resources />} />
         <Route path="about" element={<About />} />
         <Route path="contact" element={<Contact />} />
         <Route path="profile" element={<Profile />} />
