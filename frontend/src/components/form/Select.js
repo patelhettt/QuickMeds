@@ -6,11 +6,13 @@ const Select = ({ title = 'Select Field', name, isRequired, options = ['Option 1
             <label className="label">
                 <span className="label-text">{title}</span>
             </label>
-            <select className="select select-bordered select-xs w-full max-w-xs" name={name} required={isRequired}>
-                <option disabled>Choose an option</option>
+            <select className="select select-bordered select-xs w-full max-w-xs" name={name} required={isRequired === true || isRequired === 'required'}>
+                <option disabled selected>Choose an option</option>
 
                 {
-                    options.map((option, index) => <option key={index}>{option}</option>)
+                    options && options.length > 0 ? 
+                    options.map((option, index) => <option key={index}>{option}</option>) :
+                    <option disabled>No options available</option>
                 }
             </select>
         </div>

@@ -78,10 +78,19 @@ const PharmacyItems = () => {
 
     const [pharmacyItems, setpharmacyItems] = useState([]);
 
-    useEffect(() => {
+    // Function to fetch items - can be called after deletion to refresh the list
+    const fetchItems = () => {
         fetch('http://localhost:5000/api/requestedItems/pharmacy')
             .then(res => res.json())
-            .then(products => setpharmacyItems(products));
+            .then(products => setpharmacyItems(products))
+            .catch(error => {
+                console.error('Error fetching items:', error);
+                toast.error('Failed to load requested items');
+            });
+    };
+
+    useEffect(() => {
+        fetchItems();
     }, []);
 
     return (
@@ -254,9 +263,10 @@ const PharmacyItems = () => {
                                         <span className='flex items-center gap-x-1'>
                                             <EditButton />
                                             <DeleteButton
-                                                deleteApiLink='http://localhost:5000/api/requestedItems/pharmacy/'
+                                                deleteApiLink={`http://localhost:5000/api/requestedItems/pharmacy/${product._id}`}
                                                 itemId={product._id}
-                                                name={product.tradeName} />
+                                                name={product.tradeName}
+                                                onDelete={fetchItems} />
                                         </span>
                                     ]
                                 } />)

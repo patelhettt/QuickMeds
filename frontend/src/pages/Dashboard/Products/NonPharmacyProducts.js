@@ -190,7 +190,12 @@ const NonPharmacyProducts = () => {
                                 product.Pack_MRP || 'N/A',
                                 <span className='flex items-center gap-x-1'>
                                     <EditButton id={product._id} />
-                                    <DeleteButton deleteApiLink={`${API_BASE_URL}/${product._id}`} itemId={product._id} name={product.tradeName} />
+                                    <DeleteButton 
+                                        deleteApiLink={`${API_BASE_URL}/${product._id}`} 
+                                        itemId={product._id} 
+                                        name={product.Product_name} 
+                                        onDelete={() => fetchProducts(currentPage)}
+                                    />
                                 </span>
                             ]}
                         />
