@@ -29,7 +29,7 @@ mongoose.connect(MONGODB_URI, {
 
 // Routes
 app.use('/api/products/auth', require('./routes/api/auth/auth'));
-app.use('/api/products/employees', require('./routes/api/employees/employees'));
+app.use('/api/products/employees', require('./routes/api/employees/users'));
 app.use('/api/products/customers', require('./routes/api/customers/customers'));
 
 // Products API Routes
