@@ -15,7 +15,7 @@ import NewButton from '../../components/buttons/NewButton';
 import AddModal from '../../components/modals/AddModal';
 
 const Employees = () => {
-    const tableHeadItems = ['SN', 'Name', 'Phone', 'Website', 'Email', 'Role', 'Address', 'Creator', 'Created At', 'Updated By', 'Updated At', 'Actions'];
+    const tableHeadItems = ['SN', 'First Name', 'Last Name', 'Email', 'Role', 'Actions'];
     const tableHead = (
         <tr>
             {tableHeadItems?.map((tableHeadItem, index) => (
@@ -32,63 +32,86 @@ const Employees = () => {
     const addEmployee = async (event) => {
         event.preventDefault();
         try {
-            const name = event?.target?.employeeName?.value;
-            const phone = event?.target?.employeePhone?.value;
-            const website = event?.target?.employeeWebsite?.value;
-            const email = event?.target?.employeeEmail?.value;
-            const role = event?.target?.employeeRole?.value;
-            const address = event?.target?.employeeAddress?.value;
-            const addedBy = 'admin';
-            const addedTime = new Date();
-            const updatedBy = 'admin';
-            const updatedTime = new Date();
+            const firstName = event?.target?.firstName?.value;
+            const lastName = event?.target?.lastName?.value;
+            const email = event?.target?.email?.value;
+            const password = event?.target?.password?.value;
+            const confirmPassword = event?.target?.confirmPassword?.value;
+            const role = event?.target?.role?.value || 'employee';
 
-            const employeeDetails = { name, phone, website, email, role, address, addedBy, addedTime, updatedBy, updatedTime };
+            if (!firstName || !lastName || !email || !password || !confirmPassword) {
+                toast.error("All fields are required");
+                return;
+            }
 
-            // Send data to the local backend server
+            if (password !== confirmPassword) {
+                toast.error("Passwords do not match");
+                return;
+            }
+
+            const userDetails = { firstName, lastName, email, password, confirmPassword, role };
+
+            // Send data to the backend server
             const response = await fetch(`${API_URL}/api/products/auth/register`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(employeeDetails),
+                body: JSON.stringify(userDetails),
             });
 
             const data = await response.json();
 
             if (response.ok) {
-                toast.success(<AddModal name={name} />);
-                setEmployees([...employees, data]); // Update the employees list with the new employee
+                toast.success(`User ${firstName} ${lastName} added successfully`);
+                fetchEmployees(); // Refresh the list after successful addition
+                // Clear the form
+                event.target.reset();
+                // Close the modal
+                document.getElementById('create-new-product').checked = false;
             } else {
-                toast.error(`Failed to add employee: ${data.message}`);
+                toast.error(data.message || "Failed to add user");
             }
         } catch (error) {
-            console.error("Error during employee creation:", error);
             toast.error("Something went wrong. Please try again.");
         }
     };
 
     const [employees, setEmployees] = useState([]);
 
-    useEffect(() => {
-        // Fetch employees from the local backend server
-        const fetchEmployees = async () => {
-            try {
-                const response = await fetch(`${API_URL}/api/products/auth/register`);
-                if (!response.ok) {
-                    throw new Error("Failed to fetch employees");
-                }
-                const data = await response.json();
-                setEmployees(data);
-            } catch (error) {
-                console.error("Error fetching employees:", error);
-                toast.error("Failed to load employees. Please check your connection.");
+    const fetchEmployees = async () => {
+        try {
+            const response = await fetch(`${API_URL}/api/products/employees`);
+            
+            if (!response.ok) {
+                throw new Error("Failed to fetch users");
             }
-        };
+            
+            const data = await response.json();
+            
+            // Map the response data to match the table structure
+            const formattedData = data.map(user => ({
+                _id: user._id,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                email: user.email,
+                role: user.role
+            }));
+            
+            setEmployees(formattedData);
+        } catch (error) {
+            toast.error("Failed to load users. Please check your connection.");
+        }
+    };
 
+    useEffect(() => {
         fetchEmployees();
-    }, []); // Empty dependency array ensures this runs only once on component mount
+    }, []);
 
+    const handleCancel = () => {
+        document.getElementById('create-new-product').checked = false;
+    };
+    
     return (
         <section className='p-4 mt-16'>
             <div>
@@ -97,9 +120,9 @@ const Employees = () => {
                     name='Employees'
                     value={employees.length}
                     buttons={[
-                        <NewButton modalId='create-new-product' />,
-                        <RefreshButton />,
-                        <PrintButton />,
+                        <NewButton key="new" modalId='create-new-product' />,
+                        <RefreshButton key="refresh" onClick={fetchEmployees} />,
+                        <PrintButton key="print" />
                     ]}
                 />
                 <input type="checkbox" id="create-new-product" className="modal-toggle" />
@@ -108,13 +131,22 @@ const Employees = () => {
                         <ModalCloseButton modalId={'create-new-product'} />
                         <ModalHeading modalHeading={'Add a new Employee'} />
                         <form onSubmit={addEmployee} className='mx-auto'>
-                            <div className='grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2 mb-2'>
-                                <Input title={'Employee Name'} name='employeeName' isRequired='required' type='text' />
-                                <Input title={'Employee Phone'} name='employeePhone' isRequired='required' type='text' />
-                                <Input title={'Employee Website'} name='employeeWebsite' isRequired='required' type='text' />
-                                <Input title={'Employee Email'} name='employeeEmail' isRequired='required' type='email' />
-                                <Input title={'Employee Role'} name='employeeRole' isRequired='required' type='text' />
-                                <Input title={'Employee Address'} name='employeeAddress' isRequired='required' type='text' />
+                            <div className='grid grid-cols-2 md:grid-cols-2 lg:grid-cols-2 gap-x-4 gap-y-2 mb-2'>
+                                <Input title={'First Name'} name='firstName' isRequired='required' type='text' />
+                                <Input title={'Last Name'} name='lastName' isRequired='required' type='text' />
+                                <Input title={'Email'} name='email' isRequired='required' type='email' />
+                                <Input title={'Password'} name='password' isRequired='required' type='password' />
+                                <Input title={'Confirm Password'} name='confirmPassword' isRequired='required' type='password' />
+                                <div className="form-control">
+                                    <label className="label">
+                                        <span className="label-text">Role</span>
+                                    </label>
+                                    <select name="role" className="select select-bordered w-full" defaultValue="employee" required>
+                                        <option value="">Select Role</option>
+                                        <option value="admin">Admin</option>
+                                        <option value="employee">Employee</option>
+                                    </select>
+                                </div>
                             </div>
                             <div className="flex flex-col w-full lg:flex-row mt-4 place-content-center">
                                 <div className="grid">
@@ -122,7 +154,7 @@ const Employees = () => {
                                 </div>
                                 <div className="divider lg:divider-horizontal hidden md:block lg:block"></div>
                                 <div className="grid">
-                                    <CancelButton extraClass='lg:mt-4 md:mt-3 mt-2' />
+                                <CancelButton extraClass='lg:mt-4 md:mt-3 mt-2' onClick={handleCancel} type="button" />
                                 </div>
                             </div>
                         </form>
@@ -137,22 +169,16 @@ const Employees = () => {
                             key={employee._id}
                             tableRowsData={[
                                 index + 1,
-                                employee.name,
-                                employee.phone,
-                                employee.website,
+                                employee.firstName,
+                                employee.lastName,
                                 employee.email,
                                 employee.role,
-                                employee.address,
-                                employee.addedBy,
-                                employee?.addedTime?.slice(0, 10),
-                                employee.updatedBy,
-                                employee?.updatedTime?.slice(0, 10),
                                 <span className='flex items-center gap-x-1'>
                                     <EditButton />
                                     <DeleteButton
-                                        deleteApiLink={`${API_URL}/api/products/auth/register/`}
-                                        itemId={employee._id}
-                                        name={employee.name}
+                                        deleteApiLink={`${API_URL}/api/products/employees/${employee._id}`}
+                                        name={`${employee.firstName} ${employee.lastName}`}
+                                        onDelete={fetchEmployees}
                                     />
                                 </span>,
                             ]}
