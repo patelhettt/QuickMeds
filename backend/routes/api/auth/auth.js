@@ -8,8 +8,9 @@ const router = express.Router();
 // Registration Route
 router.post('/register', async (req, res) => {
     try {
-        const { firstName, lastName, email, password, confirmPassword } = req.body;
+        const { firstName, lastName, email, password, confirmPassword, role } = req.body;
 
+        console.log(role);
         // Check if passwords match
         if (password !== confirmPassword) {
             return res.status(400).json({ message: "Passwords do not match" });
@@ -22,7 +23,7 @@ router.post('/register', async (req, res) => {
         }
 
         // Create new user
-        const newUser = new User({ firstName, lastName, email, password });
+        const newUser = new User({ firstName, lastName, email, password, role });
         await newUser.save();
 
         // Generate JWT Token

@@ -15,7 +15,7 @@ import NewButton from '../../components/buttons/NewButton';
 import AddModal from '../../components/modals/AddModal';
 
 const Employees = () => {
-    const tableHeadItems = ['SN', 'Name', 'Phone', 'Website', 'Email', 'Address', 'Creator', 'Created At', 'Updated By', 'Updated At', 'Actions'];
+    const tableHeadItems = ['SN', 'Name', 'Phone', 'Website', 'Email', 'Role', 'Address', 'Creator', 'Created At', 'Updated By', 'Updated At', 'Actions'];
     const tableHead = (
         <tr>
             {tableHeadItems?.map((tableHeadItem, index) => (
@@ -36,16 +36,17 @@ const Employees = () => {
             const phone = event?.target?.employeePhone?.value;
             const website = event?.target?.employeeWebsite?.value;
             const email = event?.target?.employeeEmail?.value;
+            const role = event?.target?.employeeRole?.value;
             const address = event?.target?.employeeAddress?.value;
             const addedBy = 'admin';
             const addedTime = new Date();
             const updatedBy = 'admin';
             const updatedTime = new Date();
 
-            const employeeDetails = { name, phone, website, email, address, addedBy, addedTime, updatedBy, updatedTime };
+            const employeeDetails = { name, phone, website, email, role, address, addedBy, addedTime, updatedBy, updatedTime };
 
             // Send data to the local backend server
-            const response = await fetch(`${API_URL}/api/products/employees`, {
+            const response = await fetch(`${API_URL}/api/products/auth/register`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -73,7 +74,7 @@ const Employees = () => {
         // Fetch employees from the local backend server
         const fetchEmployees = async () => {
             try {
-                const response = await fetch(`${API_URL}/api/products/employees`);
+                const response = await fetch(`${API_URL}/api/products/auth/register`);
                 if (!response.ok) {
                     throw new Error("Failed to fetch employees");
                 }
@@ -112,6 +113,7 @@ const Employees = () => {
                                 <Input title={'Employee Phone'} name='employeePhone' isRequired='required' type='text' />
                                 <Input title={'Employee Website'} name='employeeWebsite' isRequired='required' type='text' />
                                 <Input title={'Employee Email'} name='employeeEmail' isRequired='required' type='email' />
+                                <Input title={'Employee Role'} name='employeeRole' isRequired='required' type='text' />
                                 <Input title={'Employee Address'} name='employeeAddress' isRequired='required' type='text' />
                             </div>
                             <div className="flex flex-col w-full lg:flex-row mt-4 place-content-center">
@@ -139,6 +141,7 @@ const Employees = () => {
                                 employee.phone,
                                 employee.website,
                                 employee.email,
+                                employee.role,
                                 employee.address,
                                 employee.addedBy,
                                 employee?.addedTime?.slice(0, 10),
@@ -147,7 +150,7 @@ const Employees = () => {
                                 <span className='flex items-center gap-x-1'>
                                     <EditButton />
                                     <DeleteButton
-                                        deleteApiLink={`${API_URL}/api/employees/`}
+                                        deleteApiLink={`${API_URL}/api/products/auth/register/`}
                                         itemId={employee._id}
                                         name={employee.name}
                                     />

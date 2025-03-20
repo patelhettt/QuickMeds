@@ -263,10 +263,10 @@ const PharmacyItems = () => {
                                         <span className='flex items-center gap-x-1'>
                                             <EditButton />
                                             <DeleteButton
-                                                deleteApiLink={`http://localhost:5000/api/requestedItems/pharmacy/${product._id}`}
+                                                deleteApiLink='http://localhost:5000/api/requestedItems/pharmacy/'
                                                 itemId={product._id}
                                                 name={product.tradeName}
-                                                onDelete={fetchItems} />
+                                                fetchItems={fetchItems} />
                                         </span>
                                     ]
                                 } />)

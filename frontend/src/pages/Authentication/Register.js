@@ -15,7 +15,8 @@ const Register = () => {
         lastName: '',
         email: '',
         password: '',
-        confirmPassword: ''
+        confirmPassword: '',
+        role : '',
     });
 
     const handleChange = (e) => {
@@ -25,10 +26,10 @@ const Register = () => {
     const handleRegister = async (event) => {
         event.preventDefault();
     
-        const { firstName, lastName, email, password, confirmPassword } = formData;
+        const { firstName, lastName, email, password, confirmPassword, role} = formData;
         
         // Basic validation
-        if (!firstName || !lastName || !email || !password || !confirmPassword) {
+        if (!firstName || !lastName || !email || !password || !confirmPassword || !role) {
             toast.error('Please fill in all fields');
             return;
         }
@@ -138,7 +139,24 @@ const Register = () => {
                                                 />
                                             </div>
                                         </div>
-                                        
+                                        <div className="form-control">
+                                            <label className="label">
+                                                <span className="label-text font-medium">Request For Role</span>
+                                            </label>
+                                            <div className="relative">
+                                                <select 
+                                                    name="role" 
+                                                    value={formData.role} 
+                                                    onChange={handleChange} 
+                                                    className="select select-bordered w-full"
+                                                >
+                                                    <option value="">Select Role</option>
+                                                    <option value="Admin">Admin</option>
+                                                    <option value="Employee">Employee</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
                                         <div className="form-control">
                                             <label className="label">
                                                 <span className="label-text font-medium">Password</span>
