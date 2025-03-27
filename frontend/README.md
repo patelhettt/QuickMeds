@@ -1,4 +1,6 @@
-<h1 align="center">Inventory Management System (Full-stack)</h1>
+<h1 align="center">
+  <img src="https://readme-typing-svg.herokuapp.com?font=Fira+Code&weight=600&size=30&pause=1000&color=61DAFB&center=true&vCenter=true&random=false&width=435&lines=QuickMeds;Inventory+Management;Full-stack+Solution" alt="Typing SVG" />
+</h1>
 
 <!-- repository summary badges start -->
 <div align="center">
@@ -27,41 +29,69 @@
 <!-- repository summary badges end -->
 
 <br>
-<br>
 
-### Website Link: https://inventory-managemnt-system.web.app/
+<p align="center">
+  <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" alt="-----------------------------------------------------" />
+</p>
 
-### Client Side Code:
+### 🌐 Website Link: https://quickmeds-frontend-online.onrender.com/
 
-### Server Side Code:
+<p align="center">
+  <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" alt="-----------------------------------------------------" />
+</p>
 
-### Features
+### 🚀 Features
 
-1. Authentication (Firebase)
-2. Manage products (CRUD operations)
-3. User profile
-4. Author Profile
-5. Dashboard
-6. Admin panel
+<div align="center">
 
-### Technology Used
+| 🔐 Authentication | ✅ CRUD Operations | 👤 User Profile |
+|:----------------:|:------------------:|:---------------:|
+| 👨‍💼 Author Profile | 📊 Dashboard | 👑 Admin Panel |
 
-1. React JS
-2. Express.js
-3. Cors
-4. Dotenv
-5. Nodemon
-6. MongoDB
-7. Tailwind CSS
-8. HTML
+</div>
 
-### Hosting
+<p align="center">
+  <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" alt="-----------------------------------------------------" />
+</p>
 
-1. Client-side hosting: Firebase
-2. Server-side hosting: Heroku
+### 💻 Technology Stack
 
-<br>
-<br>
+<div align="center">
+  <img src="https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React" />
+  <img src="https://img.shields.io/badge/Express-000000?style=for-the-badge&logo=express&logoColor=white" alt="Express.js" />
+  <img src="https://img.shields.io/badge/MongoDB-47A248?style=for-the-badge&logo=mongodb&logoColor=white" alt="MongoDB" />
+  <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS" />
+  <img src="https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black" alt="Firebase" />
+  <img src="https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white" alt="HTML" />
+  <img src="https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="Node.js" />
+</div>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" alt="-----------------------------------------------------" />
+</p>
+
+### 🏠 Hosting
+
+<div align="center">
+  <table>
+    <tr>
+      <td align="center">Client-side</td>
+      <td align="center">Server-side</td>
+    </tr>
+    <tr>
+      <td align="center">
+        <img src="https://img.shields.io/badge/Render-46E3B7?style=for-the-badge&logo=render&logoColor=white" alt="Render" />
+      </td>
+      <td align="center">
+        <img src="https://img.shields.io/badge/Render-46E3B7?style=for-the-badge&logo=render&logoColor=white" alt="Render" />
+      </td>
+    </tr>
+  </table>
+</div>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" alt="-----------------------------------------------------" />
+</p>
 
 <div align="center">
     <a href="https://github.com/STRINGLABITSOLUTIONS/inventory-management-system">
@@ -69,5 +99,7 @@
     </a>
 </div>
 
-<br>
-<br>
+<div align="center">
+  <img src="https://profile-counter.glitch.me/inventory-management-system/count.svg" alt="Visitor Count" />
+  <p>👁️ Visitors</p>
+</div>
