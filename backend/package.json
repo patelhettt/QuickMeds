@@ -10,7 +10,7 @@
     "mongoose": "^8.11.0",
     "nodemon": "^2.0.19"
   },
-  "name": "inventory-management-system-server",
+  "name": "quickmeds-management-system-server",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
