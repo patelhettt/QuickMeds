@@ -234,7 +234,7 @@ const NonPharmacyProducts = () => {
                                     product.company,
                                     product.stock,
                                     <span className='flex items-center gap-x-1'>
-                                        <EditButton id={product._id} />
+                                        <EditButton id={product._id} apiEndpoint="pharmacy" />
                                         <DeleteButton
                                             deleteApiLink={`${API_BASE_URL}/${product._id}`}
                                             itemId={product._id}
