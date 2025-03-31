@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const Category = require('../models/Category'); // Import the Category model
 
 // Load environment variables
 require('dotenv').config();
@@ -71,14 +72,36 @@ router.get('/:id', async (req, res) => {
 // POST a new category
 router.post('/', async (req, res) => {
     try {
-        const newCategory = req.body;
+        const { Name, Description, Creator = 'Admin', UpdatedBy = 'Admin' } = req.body;
 
-        if (!validateCategory(newCategory)) {
-            return res.status(400).json({ message: "Invalid category data" });
+        if (!Name) {
+            return res.status(400).json({ message: "Category name is required" });
         }
 
+        // Get the next SN value
+        const lastCategory = await categoriesCollection.find().sort({ SN: -1 }).limit(1).toArray();
+        const nextSN = lastCategory.length ? lastCategory[0].SN + 1 : 1;
+
+        const newCategory = {
+            SN: nextSN,
+            Name,
+            Description: Description || '',
+            Creator,
+            CreatedAt: new Date().toISOString(),
+            UpdatedBy,
+            UpdatedAt: new Date().toISOString()
+        };
+
         const result = await categoriesCollection.insertOne(newCategory);
-        res.status(201).json({ message: "Category added successfully", data: result });
+        
+        // MongoDB Node.js driver v4.0+ doesn't return ops array
+        // Instead, we need to fetch the inserted document
+        const insertedCategory = await categoriesCollection.findOne({ _id: result.insertedId });
+        
+        res.status(201).json({ 
+            message: "Category added successfully", 
+            data: insertedCategory 
+        });
     } catch (error) {
         console.error("Error adding category:", error.message);
         res.status(500).json({ message: "Server error", error: error.message });

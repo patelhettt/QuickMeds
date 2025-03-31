@@ -1,43 +1,33 @@
 const express = require('express');
 const router = express.Router();
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-
-// Load environment variables
 require('dotenv').config();
 
-// MongoDB connection URI
+// MongoDB connection
 const uri = process.env.MONGODB_URI || "mongodb://localhost:27017";
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
-// Connect to MongoDB
 async function connectToDatabase() {
     try {
         await client.connect();
         console.log("Connected to MongoDB");
     } catch (error) {
         console.error("Failed to connect to MongoDB:", error);
-        process.exit(1); // Terminate the process if the connection fails
+        process.exit(1);
     }
 }
 
 connectToDatabase();
 
-// Database collection
 const companiesCollection = client.db('setup').collection('companies');
 
-// GET all companies
+// ✅ GET all companies
 router.get('/', async (req, res) => {
     try {
-        const query = {};
-        const cursor = companiesCollection.find(query);
-        const companies = await cursor.toArray();
-
-        const count = await companiesCollection.countDocuments(query);
-
-        if (count === 0) {
+        const companies = await companiesCollection.find().toArray();
+        if (!companies.length) {
             return res.status(404).json({ message: "No companies found" });
         }
-
         res.status(200).json(companies);
     } catch (error) {
         console.error("Error fetching companies:", error.message);
@@ -45,18 +35,15 @@ router.get('/', async (req, res) => {
     }
 });
 
-// GET a company by ID
+// ✅ GET a company by ID
 router.get('/:id', async (req, res) => {
     try {
         const id = req.params.id;
-
-        if (!id || !ObjectId.isValid(id)) {
+        if (!ObjectId.isValid(id)) {
             return res.status(400).json({ message: "Invalid company ID" });
         }
 
-        const query = { _id: new ObjectId(id) };
-        const company = await companiesCollection.findOne(query);
-
+        const company = await companiesCollection.findOne({ _id: new ObjectId(id) });
         if (!company) {
             return res.status(404).json({ message: `Company with ID ${id} not found` });
         }
@@ -68,35 +55,57 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-// POST a new company
+// ✅ POST a new company
 router.post('/', async (req, res) => {
     try {
-        const newCompany = req.body;
+        const { Name, Phone, Website, Email, Address, Creator = 'Admin', UpdatedBy = 'Admin' } = req.body;
 
-        if (!validateCompany(newCompany)) {
-            return res.status(400).json({ message: "Invalid company data" });
+        if (!Name || !Phone || !Email || !Address) {
+            return res.status(400).json({ message: "Required fields are missing" });
         }
 
+        // Get the next SN value
+        const lastCompany = await companiesCollection.find().sort({ SN: -1 }).limit(1).toArray();
+        const nextSN = lastCompany.length ? lastCompany[0].SN + 1 : 1;
+
+        const newCompany = {
+            SN: nextSN,
+            Name,
+            Phone,
+            Website,
+            Email,
+            Address,
+            Creator,
+            CreatedAt: new Date().toISOString(),
+            UpdatedBy,
+            UpdatedAt: new Date().toISOString()
+        };
+
         const result = await companiesCollection.insertOne(newCompany);
-        res.status(201).json({ message: "Company added successfully", data: result });
+        
+        // MongoDB Node.js driver v4.0+ doesn't return ops array
+        // Instead, we need to fetch the inserted document
+        const insertedCompany = await companiesCollection.findOne({ _id: result.insertedId });
+        
+        res.status(201).json({ 
+            message: "Company added successfully", 
+            data: insertedCompany 
+        });
     } catch (error) {
         console.error("Error adding company:", error.message);
         res.status(500).json({ message: "Server error", error: error.message });
     }
 });
 
-// DELETE a company by ID
+// ✅ DELETE a company by ID
 router.delete('/:id', async (req, res) => {
     try {
         const id = req.params.id;
-
-        if (!id || !ObjectId.isValid(id)) {
+        if (!ObjectId.isValid(id)) {
             return res.status(400).json({ message: "Invalid company ID" });
         }
 
-        const query = { _id: new ObjectId(id) };
-        const result = await companiesCollection.deleteOne(query);
-
+        const result = await companiesCollection.deleteOne({ _id: new ObjectId(id) });
         if (result.deletedCount === 0) {
             return res.status(404).json({ message: `Company with ID ${id} not found` });
         }
@@ -108,53 +117,42 @@ router.delete('/:id', async (req, res) => {
     }
 });
 
-// PUT update a company by ID
+// ✅ PUT update a company by ID
 router.put('/:id', async (req, res) => {
     try {
         const id = req.params.id;
-        const updateData = req.body;
-
-        if (!id || !ObjectId.isValid(id)) {
+        if (!ObjectId.isValid(id)) {
             return res.status(400).json({ message: "Invalid company ID" });
         }
 
-        const filter = { _id: new ObjectId(id) };
-        const options = { upsert: true };
+        const { Name, Phone, Website, Email, Address, UpdatedBy = "Admin" } = req.body;
 
-        const updateCompanyData = {
+        if (!Name || !Phone || !Website || !Email || !Address) {
+            return res.status(400).json({ message: "All fields are required for update" });
+        }
+
+        const updateData = {
             $set: {
-                name: updateData.name,
-                phone: updateData.phone,
-                website: updateData.website,
-                email: updateData.email,
-                address: updateData.address,
-                updatedBy: updateData.updatedBy,
-                updatedAt: new Date()
+                Name,
+                Phone,
+                Website,
+                Email,
+                Address,
+                UpdatedBy,
+                UpdatedAt: new Date().toISOString()
             }
         };
 
-        const result = await companiesCollection.updateOne(filter, updateCompanyData, options);
-
+        const result = await companiesCollection.updateOne({ _id: new ObjectId(id) }, updateData);
         if (result.matchedCount === 0) {
             return res.status(404).json({ message: `Company with ID ${id} not found` });
         }
 
-        res.status(200).json({ message: "Company updated successfully", result });
+        res.status(200).json({ message: "Company updated successfully" });
     } catch (error) {
         console.error("Error updating company:", error.message);
         res.status(500).json({ message: "Server error", error: error.message });
     }
 });
-
-// Helper function to validate company data
-function validateCompany(company) {
-    const requiredFields = ['name', 'phone', 'website', 'email', 'address'];
-    for (const field of requiredFields) {
-        if (!company[field]) {
-            return false;
-        }
-    }
-    return true;
-}
 
 module.exports = router;

@@ -11,106 +11,108 @@ import ModalCloseButton from '../../../components/buttons/ModalCloseButton';
 import ModalHeading from '../../../components/headings/ModalHeading';
 import NewButton from '../../../components/buttons/NewButton';
 import CancelButton from '../../../components/buttons/CancelButton';
-import AddModal from '../../../components/modals/AddModal';
+
+const API_BASE_URL = 'http://localhost:5000/api/setup/categories';
 
 const Categories = () => {
-    const tableHeadItems = ['SN', 'Name', 'Description', 'Creator', 'Created At', 'Updated By', 'Updated At', 'Actions'];
+    const [categories, setCategories] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    const tableHead = <tr>
-        {
-            tableHeadItems?.map(tableHeadItem => <th className='text-xs' >{tableHeadItem}</th>)
-        }
-    </tr>;
-
-    const addCategory = event => {
-        event.preventDefault();
-
-        const name = event?.target?.categoryName?.value;
-        const description = event?.target?.categoryDescription?.value;
-        const addedBy = 'admin';
-        const addedTime = new Date();
-        const updatedBy = 'admin';
-        const updatedTime = new Date();
-
-        const categoryDetails = { name, description, addedBy, addedTime, updatedBy, updatedTime };
-
-        // send data to server
-        fetch('http://localhost:5000/api/setup/categories', {
-            method: 'POST',
-            headers: {
-                'content-type': 'application/json'
-            },
-            body: JSON.stringify(categoryDetails)
-        })
+    const fetchCategories = () => {
+        setLoading(true);
+        fetch(API_BASE_URL)
             .then(res => res.json())
-            .then(data => {
-                <AddModal name={name} />
-            });
+            .then(data => setCategories(data))
+            .catch(error => console.error("Error fetching categories:", error))
+            .finally(() => setLoading(false));
     };
 
-    const [categories, setCategories] = useState([]);
-
     useEffect(() => {
-        fetch('http://localhost:5000/api/setup/categories')
-            .then(res => res.json())
-            .then(products => setCategories(products));
+        fetchCategories();
     }, []);
+
+    const addCategory = (event) => {
+        event.preventDefault();
+        const Name = event.target.categoryName.value;
+        const Description = event.target.categoryDescription.value;
+        const Creator = 'Admin';
+
+        const categoryDetails = { Name, Description, Creator };
+
+        fetch(API_BASE_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(categoryDetails)
+        })
+        .then(res => res.json())
+        .then(() => {
+            fetchCategories(); // Refetch categories
+            document.getElementById('create-new-product').checked = false; // Close modal
+        })
+        .catch(error => console.error("Error adding category:", error));
+
+        event.target.reset();
+    };
+
+    const deleteCategory = (id) => {
+        fetch(`${API_BASE_URL}/${id}`, { method: 'DELETE' })
+            .then(res => res.json())
+            .then(() => {
+                setCategories(categories.filter(category => category._id !== id)); // Remove from state
+            })
+            .catch(error => console.error("Error deleting category:", error));
+    };
 
     return (
         <section className='p-4 mt-16'>
-            <div>
-                <DashboardPageHeading
-                    name='Categories'
-                    value={categories.length}
-                    buttons={[
-                        <NewButton modalId='create-new-product' />,
-                        <RefreshButton />,
-                        <PrintButton />
-                    ]}
-                />
+            <DashboardPageHeading
+                name='Categories'
+                value={categories.length}
+                buttons={[
+                    <NewButton key="new" modalId='create-new-product' />,
+                    <RefreshButton key="refresh" onClick={fetchCategories} />,
+                    <PrintButton key="print" />
+                ]}
+            />
 
-                <input type="checkbox" id="create-new-product" className="modal-toggle" />
-                <label htmlFor="create-new-product" className="modal cursor-pointer">
-                    <label className="modal-box lg:w-7/12 md:w-10/12 w-11/12 max-w-4xl relative" htmlFor="">
-                        <ModalCloseButton modalId={'create-new-product'} />
-
-                        <ModalHeading modalHeading={'Create a New Category'} />
-
-                        <form onSubmit={addCategory} className='mx-auto'>
-                            <div className='grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2 mb-2'>
-                                <Input title={'Category Name'} name='categoryName' isRequired='required' />
-                                <Input title={'Description'} name='categoryDescription' isRequired='required' />
-                            </div>
-
-                            <div className="flex flex-col w-full lg:flex-row mt-4 place-content-center">
-                                <div className="grid">
-                                    <SaveButton extraClass='mt-4' />
-                                </div>
-
-                                <div className="divider lg:divider-horizontal hidden md:block lg:block"></div>
-
-                                <div className="grid">
-                                    <CancelButton extraClass='lg:mt-4 md:mt-3 mt-2' />
-                                </div>
-                            </div>
-                        </form>
-                    </label>
+            <input type="checkbox" id="create-new-product" className="modal-toggle" />
+            <label htmlFor="create-new-product" className="modal cursor-pointer">
+                <label className="modal-box lg:w-7/12 md:w-10/12 w-11/12 max-w-4xl relative">
+                    <ModalCloseButton modalId='create-new-product' />
+                    <ModalHeading modalHeading='Create a New Category' />
+                    <form onSubmit={addCategory} className='mx-auto'>
+                        <div className='grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2 mb-2'>
+                            <Input title='Category Name' name='categoryName' isRequired={true} />
+                            <Input title='Description' name='categoryDescription' isRequired={true} />
+                        </div>
+                        <div className="flex flex-col w-full lg:flex-row mt-4 place-content-center">
+                            <SaveButton extraClass='mt-4' />
+                            <div className="divider lg:divider-horizontal hidden md:block lg:block"></div>
+                            <CancelButton extraClass='lg:mt-4 md:mt-3 mt-2' />
+                        </div>
+                    </form>
                 </label>
-            </div>
+            </label>
 
-            <table className="table table-zebra table-compact w-full">
-                <thead>
-                    {
-                        tableHead
-                    }
-                </thead>
-                <tbody>
-                    {
-                        categories.map((category, index) =>
-                            <TableRow
-                                key={category._id}
-                                tableRowsData={
-                                    [
+            {loading ? (
+                <p className="text-center mt-4">Loading categories...</p>
+            ) : (
+                <table className="table table-zebra table-compact w-full">
+                    <thead>
+                        <tr>
+                            {['SN', 'Name', 'Description', 'Creator', 'Created At', 'Updated By', 'Updated At', 'Actions'].map((head, index) => (
+                                <th key={index} className='text-xs'>{head}</th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {categories.length === 0 ? (
+                            <tr><td colSpan="8" className="text-center">No categories found</td></tr>
+                        ) : (
+                            categories.map((category, index) => (
+                                <TableRow
+                                    key={category._id}
+                                    tableRowsData={[
                                         index + 1,
                                         category.Name,
                                         category.Description,
@@ -118,18 +120,22 @@ const Categories = () => {
                                         category?.CreatedAt?.slice(0, 10),
                                         category.UpdatedBy,
                                         category?.UpdatedAt?.slice(0, 10),
-                                        <span className='flex items-center gap-x-1'>
+                                        <span className='flex items-center gap-x-1' key={category._id}>
                                             <EditButton />
                                             <DeleteButton
-                                                deleteApiLink='http://localhost:5000/api/setup/categories/'
+                                                deleteApiLink={`${API_BASE_URL}/${category._id}`}
                                                 itemId={category._id}
-                                                name={category.name} />
+                                                name={category.Name}
+                                                onDelete={() => deleteCategory(category._id)}
+                                            />
                                         </span>
-                                    ]
-                                } />)
-                    }
-                </tbody>
-            </table>
+                                    ]}
+                                />
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            )}
         </section>
     );
 };

@@ -26,18 +26,18 @@ const Employees = () => {
         </tr>
     );
 
-    // Define the API URL using an environment variable or a fallback
     const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+    const token = localStorage.getItem('token');
 
     const addEmployee = async (event) => {
         event.preventDefault();
         try {
-            const firstName = event?.target?.firstName?.value;
-            const lastName = event?.target?.lastName?.value;
-            const email = event?.target?.email?.value;
-            const password = event?.target?.password?.value;
-            const confirmPassword = event?.target?.confirmPassword?.value;
-            const role = event?.target?.role?.value || 'employee';
+            const firstName = event.target.firstName.value;
+            const lastName = event.target.lastName.value;
+            const email = event.target.email.value;
+            const password = event.target.password.value;
+            const confirmPassword = event.target.confirmPassword.value;
+            const role = event.target.role.value || 'employee';
 
             if (!firstName || !lastName || !email || !password || !confirmPassword) {
                 toast.error("All fields are required");
@@ -51,11 +51,11 @@ const Employees = () => {
 
             const userDetails = { firstName, lastName, email, password, confirmPassword, role };
 
-            // Send data to the backend server
             const response = await fetch(`${API_URL}/api/products/auth/register`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify(userDetails),
             });
@@ -64,10 +64,8 @@ const Employees = () => {
 
             if (response.ok) {
                 toast.success(`User ${firstName} ${lastName} added successfully`);
-                fetchEmployees(); // Refresh the list after successful addition
-                // Clear the form
+                fetchEmployees();
                 event.target.reset();
-                // Close the modal
                 document.getElementById('create-new-product').checked = false;
             } else {
                 toast.error(data.message || "Failed to add user");
@@ -81,7 +79,9 @@ const Employees = () => {
 
     const fetchEmployees = async () => {
         try {
-            const response = await fetch(`${API_URL}/api/products/employees`);
+            const response = await fetch(`${API_URL}/api/products/employees`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
             
             if (!response.ok) {
                 throw new Error("Failed to fetch users");
@@ -89,16 +89,7 @@ const Employees = () => {
             
             const data = await response.json();
             
-            // Map the response data to match the table structure
-            const formattedData = data.map(user => ({
-                _id: user._id,
-                firstName: user.firstName,
-                lastName: user.lastName,
-                email: user.email,
-                role: user.role
-            }));
-            
-            setEmployees(formattedData);
+            setEmployees(data);
         } catch (error) {
             toast.error("Failed to load users. Please check your connection.");
         }
@@ -120,14 +111,14 @@ const Employees = () => {
                     name='Employees'
                     value={employees.length}
                     buttons={[
-                        <NewButton key="new" modalId='create-new-product' />,
-                        <RefreshButton key="refresh" onClick={fetchEmployees} />,
+                        <NewButton key="new" modalId='create-new-product' />, 
+                        <RefreshButton key="refresh" onClick={fetchEmployees} />, 
                         <PrintButton key="print" />
                     ]}
                 />
                 <input type="checkbox" id="create-new-product" className="modal-toggle" />
                 <label htmlFor="create-new-product" className="modal cursor-pointer">
-                    <label className="modal-box lg:w-7/12 md:w-10/12 w-11/12 max-w-4xl relative" htmlFor="">
+                    <label className="modal-box lg:w-7/12 md:w-10/12 w-11/12 max-w-4xl relative">
                         <ModalCloseButton modalId={'create-new-product'} />
                         <ModalHeading modalHeading={'Add a new Employee'} />
                         <form onSubmit={addEmployee} className='mx-auto'>
@@ -149,13 +140,8 @@ const Employees = () => {
                                 </div>
                             </div>
                             <div className="flex flex-col w-full lg:flex-row mt-4 place-content-center">
-                                <div className="grid">
-                                    <SaveButton extraClass='mt-4' />
-                                </div>
-                                <div className="divider lg:divider-horizontal hidden md:block lg:block"></div>
-                                <div className="grid">
+                                <SaveButton extraClass='mt-4' />
                                 <CancelButton extraClass='lg:mt-4 md:mt-3 mt-2' onClick={handleCancel} type="button" />
-                                </div>
                             </div>
                         </form>
                     </label>
@@ -175,10 +161,9 @@ const Employees = () => {
                                 employee.role,
                                 <span className='flex items-center gap-x-1'>
                                     <EditButton />
-                                    <DeleteButton
-                                        deleteApiLink={`${API_URL}/api/products/employees/${employee._id}`}
-                                        name={`${employee.firstName} ${employee.lastName}`}
-                                        onDelete={fetchEmployees}
+                                    <DeleteButton 
+                                        deleteApiLink={`${API_URL}/api/products/employees/${employee._id}`} 
+                                        name={`${employee.firstName} ${employee.lastName}`} 
                                     />
                                 </span>,
                             ]}

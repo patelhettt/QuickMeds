@@ -13,6 +13,10 @@ import ModalHeading from '../../../components/headings/ModalHeading';
 import NewButton from '../../../components/buttons/NewButton';
 import AddModal from '../../../components/modals/AddModal';
 
+
+const API_BASE_URL = 'http://localhost:5000/api/setup/unitTypes'; 
+
+
 const UnitTypes = () => {
     const tableHeadItems = ['SN', 'Name', 'Description', 'Creator', 'Created At', 'Updated By', 'Updated At', 'Actions'];
 
@@ -25,17 +29,17 @@ const UnitTypes = () => {
     const addUnitType = event => {
         event.preventDefault();
 
-        const name = event?.target?.unitName?.value;
-        const description = event?.target?.unitDescription?.value;
-        const addedBy = 'admin';
-        const addedTime = new Date();
-        const updatedBy = 'admin';
-        const updatedTime = new Date();
+        const Name = event?.target?.unitName?.value;
+        const Description = event?.target?.unitDescription?.value;
+        const Creator = 'Admin';
+        const CreatedAt = new Date();
+        const UpdatedBy = 'Admin';
+        const UpdatedAt = new Date();
 
-        const unitTypeDetails = { name, description, addedBy, addedTime, updatedBy, updatedTime };
+        const unitTypeDetails = { Name, Description, Creator, CreatedAt, UpdatedBy, UpdatedAt };
 
         // send data to server
-        fetch('http://localhost:5000/api/setup/unitTypes', {
+        fetch(API_BASE_URL, {
             method: 'POST',
             headers: {
                 'content-type': 'application/json'
@@ -44,7 +48,13 @@ const UnitTypes = () => {
         })
             .then(res => res.json())
             .then(data => {
-                <AddModal name={name} />
+                // Refresh the unit types list after adding a new one
+                fetch(API_BASE_URL)
+                    .then(res => res.json())
+                    .then(unitType => setUnitTypes(unitType));
+                
+                // Close the modal
+                document.getElementById('create-new-product').checked = false;
             });
 
         event.target.reset();
@@ -53,7 +63,7 @@ const UnitTypes = () => {
     const [unitTypes, setUnitTypes] = useState([]);
 
     useEffect(() => {
-        fetch('http://localhost:5000/api/setup/unitTypes')
+        fetch(API_BASE_URL)
             .then(res => res.json())
             .then(unitType => setUnitTypes(unitType));
     }, []);
@@ -123,9 +133,17 @@ const UnitTypes = () => {
                                         <span className='flex items-center gap-x-1'>
                                             <EditButton />
                                             <DeleteButton
-                                                deleteApiLink='http://localhost:5000/api/setup/unitTypes/'
-                                                itemId={category._id}
-                                                name={category.name} />
+                                            deleteApiLink={`${API_BASE_URL}/${category._id}`}
+                                            itemId={category._id}
+                                            name={category.Name}
+                                            onDelete={() => {
+                                                // Refresh the unit types list after deletion
+                                                fetch(API_BASE_URL)
+                                                    .then(res => res.json())
+                                                    .then(unitTypes => setUnitTypes(unitTypes))
+                                                    .catch(err => console.error("Error refreshing unit types:", err));
+                                            }}
+                                        />
                                         </span>
                                     ]
                                 } />)

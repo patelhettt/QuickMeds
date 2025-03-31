@@ -236,74 +236,197 @@ const POS = () => {
             receiptWindow.document.write(`
                 <html>
                 <head>
-                    <title>Receipt</title>
+                    <title>Receipt - Order #${orderNumber}</title>
                     <style>
+                        @media print {
+                            @page { margin: 0; }
+                            body { margin: 1cm; }
+                        }
                         body {
-                            font-family: Arial, sans-serif;
+                            font-family: 'Helvetica', 'Arial', sans-serif;
                             max-width: 300px;
-                            margin: auto;
-                            padding: 20px;
+                            margin: 0 auto;
+                            padding: 10px;
+                            color: #333;
+                            line-height: 1.4;
+                        }
+                        .receipt {
                             border: 1px solid #ddd;
-                            border-radius: 10px;
-                            text-align: center;
+                            border-radius: 8px;
+                            padding: 15px;
+                            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
                             background: #fff;
                         }
-                        h1 {
+                        .header {
+                            text-align: center;
+                            margin-bottom: 15px;
+                            padding-bottom: 15px;
+                            border-bottom: 2px dashed #eee;
+                        }
+                        .logo {
                             font-size: 24px;
+                            font-weight: bold;
+                            margin-bottom: 5px;
+                            color: #2563eb;
+                        }
+                        .store-info {
+                            font-size: 12px;
+                            color: #666;
                             margin-bottom: 10px;
-                            color: #333;
                         }
-                        h2 {
-                            font-size: 18px;
-                            margin-top: 15px;
-                            color: #555;
+                        .receipt-title {
+                            font-size: 16px;
+                            text-transform: uppercase;
+                            letter-spacing: 2px;
+                            margin: 10px 0;
                         }
-                        p {
-                            font-size: 14px;
-                            margin: 5px 0;
-                            color: #444;
-                        }
-                        ul {
-                            list-style-type: none;
-                            padding: 0;
-                        }
-                        li {
-                            font-size: 14px;
+                        .order-info {
                             display: flex;
                             justify-content: space-between;
-                            border-bottom: 1px dashed #ddd;
-                            padding: 5px 0;
+                            font-size: 12px;
+                            margin-bottom: 15px;
                         }
-                        .total {
-                            font-size: 16px;
-                            font-weight: bold;
+                        .divider {
+                            border-bottom: 1px dashed #eee;
+                            margin: 10px 0;
+                        }
+                        .items-table {
+                            width: 100%;
+                            border-collapse: collapse;
+                            margin: 15px 0;
+                        }
+                        .items-table th {
+                            text-align: left;
+                            font-size: 12px;
+                            padding: 5px 0;
+                            border-bottom: 1px solid #ddd;
+                            color: #666;
+                        }
+                        .items-table td {
+                            padding: 8px 0;
+                            font-size: 12px;
+                            border-bottom: 1px dotted #eee;
+                        }
+                        .item-name {
+                            max-width: 150px;
+                            overflow: hidden;
+                            text-overflow: ellipsis;
+                            white-space: nowrap;
+                        }
+                        .qty {
+                            text-align: center;
+                        }
+                        .price, .subtotal {
+                            text-align: right;
+                        }
+                        .summary {
                             margin-top: 15px;
+                            font-size: 12px;
+                        }
+                        .total-row {
+                            display: flex;
+                            justify-content: space-between;
+                            font-weight: bold;
+                            font-size: 14px;
+                            margin-top: 10px;
                             padding-top: 10px;
-                            border-top: 2px solid #000;
+                            border-top: 2px solid #333;
                         }
                         .footer {
-                            font-size: 12px;
+                            margin-top: 20px;
+                            text-align: center;
+                            font-size: 11px;
+                            color: #777;
+                        }
+                        .barcode {
+                            text-align: center;
+                            margin: 15px 0;
+                            font-family: 'Courier New', monospace;
+                            font-size: 14px;
+                            letter-spacing: 2px;
+                        }
+                        .thank-you {
+                            text-align: center;
+                            font-size: 14px;
+                            margin: 15px 0 5px;
+                        }
+                        .policies {
+                            font-size: 10px;
+                            color: #999;
+                            text-align: center;
                             margin-top: 10px;
-                            color: #666;
                         }
                     </style>
                 </head>
                 <body>
-                    <h1>🛒 RECEIPT</h1>
-                    <p><strong>Order #:</strong> ${orderNumber}</p>
-                    <p><strong>Date:</strong> ${new Date().toLocaleString()}</p>
-                    <p><strong>Customer:</strong> ${customerName}</p>
-                    <h2>Items</h2>
-                    <ul>
-                        ${cart.map(item => `
-                            <li>
-                                <span>${item.tradeName || item.Product_name} x ${item.quantity}</span>
-                                <span>$${((item.Unit_MRP || item.unitMrp) * item.quantity).toFixed(2)}</span>
-                            </li>
-                        `).join('')}
-                    </ul>
-                    <p class="total">Total: $${totalAmount.toFixed(2)}</p>
-                    <p class="footer">Thank you for your purchase! 🎉</p>
+                    <div class="receipt">
+                        <div class="header">
+                            <div class="logo">QuickMeds</div>
+                            <div class="store-info">
+                                - Distributor -<br>
+                                Phone: 74859 06699<br>
+                                Email: info@quickmeds.com
+                            </div>
+                            <div class="receipt-title">Sales Receipt</div>
+                        </div>
+                        
+                        <div class="order-info">
+                            <div>
+                                <strong>Order #:</strong> ${orderNumber}<br>
+                                <strong>Customer:</strong> ${customerName}
+                            </div>
+                            <div>
+                                <strong>Date:</strong> ${new Date().toLocaleDateString()}<br>
+                                <strong>Time:</strong> ${new Date().toLocaleTimeString()}
+                            </div>
+                        </div>
+                        
+                        <div class="divider"></div>
+                        
+                        <table class="items-table">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th class="qty">Qty</th>
+                                    <th class="price">Price</th>
+                                    <th class="subtotal">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${cart.map(item => `
+                                    <tr>
+                                        <td class="item-name">${item.tradeName || item.Product_name}</td>
+                                        <td class="qty">${item.quantity}</td>
+                                        <td class="price">$${(item.Unit_MRP || item.unitMrp).toFixed(2)}</td>
+                                        <td class="subtotal">$${((item.Unit_MRP || item.unitMrp) * item.quantity).toFixed(2)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                        
+                        <div class="summary">
+                            <div class="total-row">
+                                <span>TOTAL</span>
+                                <span>$${totalAmount.toFixed(2)}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="barcode">
+                            *${orderNumber}*
+                        </div>
+                        
+                        <div class="thank-you">Thank you for your purchase!</div>
+                        
+                        <div class="policies">
+                            Return policy: Items may be returned within 7 days with receipt.<br>
+                            Prescription medications cannot be returned once dispensed.
+                        </div>
+                        
+                        <div class="footer">
+                            Powered by QuickMeds System<br>
+                            ${new Date().toISOString().split('T')[0]}
+                        </div>
+                    </div>
                 </body>
                 </html>
             `);
