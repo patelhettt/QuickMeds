@@ -118,22 +118,44 @@ router.delete('/:id', checkRole('admin'), async (req, res) => {
     }
 });
 
-// PUT update an employee by ID
+// PUT update an employee by ID - Modified to handle all fields
+// Update the employee update endpoint
+// PUT update employee
+// Fix the update endpoint to use userCollection instead of User model
 router.put('/:id', checkRole('admin'), async (req, res) => {
     try {
         const { id } = req.params;
-        const { firstName, lastName, email } = req.body;
+        const updateData = req.body;
 
-        if (!ObjectId.isValid(id)) return res.status(400).json({ message: "Invalid employee ID" });
+        if (!ObjectId.isValid(id)) {
+            return res.status(400).json({ message: "Invalid employee ID" });
+        }
 
-        const updateData = { $set: { firstName, lastName, email, updatedAt: new Date() } };
-        const result = await userCollection.updateOne({ _id: new ObjectId(id) }, updateData);
+        // Use userCollection instead of User model
+        const result = await userCollection.updateOne(
+            { _id: new ObjectId(id) },
+            { $set: updateData }
+        );
 
-        if (!result.matchedCount) return res.status(404).json({ message: `Employee with ID ${id} not found` });
+        if (!result.matchedCount) {
+            return res.status(404).json({ message: "Employee not found" });
+        }
 
-        res.status(200).json({ message: "Employee updated successfully" });
+        // Fetch updated user to return
+        const updatedUser = await userCollection.findOne(
+            { _id: new ObjectId(id) },
+            { projection: { password: 0 } }
+        );
+
+        res.json({
+            message: "Employee updated successfully",
+            user: updatedUser
+        });
     } catch (error) {
-        res.status(500).json({ message: "Server error" });
+        console.error("Update error:", error);
+        res.status(500).json({
+            message: error.message || "Server error"
+        });
     }
 });
 
