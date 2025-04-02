@@ -95,7 +95,7 @@
 
 <div align="center">
     <a href="https://github.com/patelhettt/QuickMeds">
-        <img width="396" src="https://github-readme-stats-mu-jet.vercel.app/api/pin/?username=STRINGLABITSOLUTIONS&repo=inventory-management-system&theme=react&bg_color=0D1117&border_color=61dafb&hide_border=false" alt="repository badge" />
+        <img width="396" src="https://github-readme-stats-mu-jet.vercel.app/api/pin/?username=patelhettt&repo=quickmeds&theme=react&bg_color=0D1117&border_color=61dafb&hide_border=false" alt="repository badge" />
     </a>
 </div>
 
