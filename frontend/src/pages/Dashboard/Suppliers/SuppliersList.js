@@ -22,6 +22,72 @@ const SuppliersList = () => {
         }
     </tr>;
 
+
+    // Add these state variables after the existing useState declarations
+    const [isEditing, setIsEditing] = useState(false);
+    const [editingSupplier, setEditingSupplier] = useState(null);
+
+    // Add these functions before the return statement
+    const handleEdit = (supplier) => {
+        setEditingSupplier(supplier);
+        setIsEditing(true);
+        document.getElementById('edit-supplier').checked = true;
+    };
+
+    const handleUpdate = async (event) => {
+        event.preventDefault();
+        try {
+            const formData = new FormData(event.target);
+            const updatedData = {
+                name: formData.get('SupplierName')?.trim(),
+                phone: formData.get('SupplierPhone')?.trim(),
+                website: formData.get('SupplierWebsite')?.trim(),
+                email: formData.get('SupplierEmail')?.trim(),
+                address: formData.get('SupplierAddress')?.trim(),
+                updatedBy: 'admin',
+                updatedTime: new Date().toISOString()
+            };
+
+            // Validate required fields
+            if (!updatedData.name || !updatedData.phone || !updatedData.email || !updatedData.address) {
+                toast.error("All fields are required");
+                return;
+            }
+
+            const response = await fetch(`http://localhost:5000/api/suppliers/lists/${editingSupplier._id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updatedData)
+            });
+
+            if (response.ok) {
+                // Refresh the suppliers list
+                fetch('http://localhost:5000/api/suppliers/lists')
+                    .then(res => res.json())
+                    .then(suppliers => setSuppliers(suppliers));
+
+                document.getElementById('edit-supplier').checked = false;
+                setEditingSupplier(null);
+                setIsEditing(false);
+
+                toast(
+                    <div className="alert alert-success shadow-lg">
+                        <div>
+                            <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current flex-shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            <span>Supplier updated successfully.</span>
+                        </div>
+                    </div>
+                );
+            } else {
+                throw new Error('Update failed');
+            }
+        } catch (error) {
+            console.error("Update error:", error);
+            toast.error("Failed to update supplier");
+        }
+    };
+
+
     const addSupplier = event => {
         event.preventDefault();
 
@@ -131,15 +197,84 @@ const SuppliersList = () => {
                                     supplier?.addedTime?.slice(0, 10),
                                     supplier.updatedBy,
                                     supplier?.updatedTime?.slice(0, 10),
+
+                                    // Update the EditButton in the TableRow component
                                     <span className='flex items-center gap-x-1'>
-                                        <EditButton />
+                                        <EditButton onClick={() => handleEdit(supplier)} />
                                         <DeleteButton deleteApiLink='http://localhost:5000/api/suppliers/lists/' itemId={supplier._id} />
                                     </span>
+
+
                                 ]
                             } />)
                     }
                 </tbody>
             </table>
+        
+            <input type="checkbox" id="edit-supplier" className="modal-toggle" />
+            <label htmlFor="edit-supplier" className="modal cursor-pointer">
+                <label className="modal-box lg:w-5/12 md:w-5/12 w-11/12 max-w-4xl relative">
+                    <ModalCloseButton modalId={'edit-supplier'} />
+                    <ModalHeading modalHeading={'Update Supplier'} />
+                    {editingSupplier && (
+                        <form onSubmit={handleUpdate} className='mx-auto'>
+                            <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 place-items-center gap-x-4 gap-y-2 mt-4 mb-8'>
+                                <Input
+                                    title={'Supplier Name'}
+                                    name='SupplierName'
+                                    isRequired='required'
+                                    type='text'
+                                    defaultValue={editingSupplier.name}
+                                />
+                                <Input
+                                    title={'Supplier Phone'}
+                                    name='SupplierPhone'
+                                    isRequired='required'
+                                    type='text'
+                                    defaultValue={editingSupplier.phone}
+                                />
+                                <Input
+                                    title={'Supplier Website'}
+                                    name='SupplierWebsite'
+                                    isRequired='required'
+                                    type='text'
+                                    defaultValue={editingSupplier.website}
+                                />
+                                <Input
+                                    title={'Supplier Email'}
+                                    name='SupplierEmail'
+                                    isRequired='required'
+                                    type='email'
+                                    defaultValue={editingSupplier.email}
+                                />
+                                <Input
+                                    title={'Supplier Address'}
+                                    name='SupplierAddress'
+                                    isRequired='required'
+                                    type='text'
+                                    defaultValue={editingSupplier.address}
+                                />
+                            </div>
+                            <div className="flex flex-col w-full lg:flex-row mt-4 place-content-center">
+                                <div className="grid">
+                                    <SaveButton extraClass='mt-4' />
+                                </div>
+                                <div className="divider lg:divider-horizontal hidden md:block lg:block"></div>
+                                <div className="grid">
+                                    <CancelButton
+                                        extraClass='lg:mt-4 md:mt-3 mt-2'
+                                        onClick={() => {
+                                            document.getElementById('edit-supplier').checked = false;
+                                            setEditingSupplier(null);
+                                            setIsEditing(false);
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        </form>
+                    )}
+                </label>
+            </label>
         </section>
     );
 };

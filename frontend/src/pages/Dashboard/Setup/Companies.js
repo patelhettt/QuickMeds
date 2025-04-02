@@ -19,12 +19,66 @@ const Companies = () => {
     const [companies, setCompanies] = useState([]);
     const [message, setMessage] = useState(null); // ✅ Added state for message
 
+    // Add these state variables after the existing useState declarations
+    const [isEditing, setIsEditing] = useState(false);
+    const [editingCompany, setEditingCompany] = useState(null);
+
+    // Add these functions before the return statement
+    const handleEdit = (company) => {
+        setEditingCompany(company);
+        setIsEditing(true);
+        document.getElementById('edit-company').checked = true;
+    };
+
+    const handleUpdate = async (event) => {
+        event.preventDefault();
+        try {
+            const formData = new FormData(event.target);
+            const updatedData = {
+                Name: formData.get('companyName')?.trim(),
+                Phone: formData.get('companyPhone')?.trim(),
+                Website: formData.get('companyWebsite')?.trim(),
+                Email: formData.get('companyEmail')?.trim(),
+                Address: formData.get('companyAddress')?.trim(),
+                UpdatedBy: 'Admin',
+                UpdatedAt: new Date().toISOString()
+            };
+
+            // Validate required fields
+            if (!updatedData.Name || !updatedData.Phone || !updatedData.Email || !updatedData.Address) {
+                setMessage({ type: "error", text: "❌ All fields are required" });
+                return;
+            }
+
+            const response = await fetch(`http://localhost:5000/api/setup/companies/${editingCompany._id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updatedData)
+            });
+
+            if (response.ok) {
+                refreshCompanies();
+                document.getElementById('edit-company').checked = false;
+                setEditingCompany(null);
+                setIsEditing(false);
+                setMessage({ type: "success", text: "✅ Company updated successfully!" });
+                setTimeout(() => setMessage(null), 3000);
+            } else {
+                throw new Error('Update failed');
+            }
+        } catch (error) {
+            console.error("Update error:", error);
+            setMessage({ type: "error", text: "❌ Error updating company: " + error.message });
+        }
+    };
+
+
     const refreshCompanies = () => {
         fetch('http://localhost:5000/api/setup/companies')
             .then(res => res.json())
             .then(data => setCompanies(data))
             .catch(err => console.error("Error refreshing companies:", err));
-    };    
+    };
 
     useEffect(() => {
         refreshCompanies(); // ✅ Only calling refresh function instead of duplicating fetch logic
@@ -53,21 +107,21 @@ const Companies = () => {
         const UpdatedBy = 'Admin';
 
         // Create company details object with all required fields
-        const companyDetails = { 
-            Name, 
-            Phone, 
-            Website, 
-            Email, 
-            Address, 
-            Creator, 
+        const companyDetails = {
+            Name,
+            Phone,
+            Website,
+            Email,
+            Address,
+            Creator,
             UpdatedBy
         };
 
         console.log("🚀 Sending Data:", companyDetails);
 
         try {
-            const res = await fetch("http://localhost:5000/api/setup/companies", { 
-                method: "POST", 
+            const res = await fetch("http://localhost:5000/api/setup/companies", {
+                method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(companyDetails)
             })
@@ -83,7 +137,7 @@ const Companies = () => {
             setMessage({ type: "success", text: "✅ Company added successfully!" });  // ✅ Success message
             // Close the modal
             document.getElementById('create-new-company').checked = false;
-            
+
             // Reset the form
             event.target.reset();
             setTimeout(() => setMessage(null), 3000);
@@ -104,7 +158,7 @@ const Companies = () => {
                     <PrintButton />
                 ]}
             />
-            
+
             {/* Add Company Modal */}
             <input type="checkbox" id="create-new-company" className="modal-toggle" />
             <label htmlFor="create-new-company" className="modal cursor-pointer">
@@ -121,7 +175,7 @@ const Companies = () => {
                         </div>
                         <div className="flex flex-col w-full lg:flex-row mt-4 place-content-center">
                             <div className="grid">
-                                <SaveButton extraClass='mt-4' onClick/>
+                                <SaveButton extraClass='mt-4' onClick />
                             </div>
                             <div className="divider lg:divider-horizontal hidden md:block lg:block"></div>
                             <div className="grid">
@@ -150,21 +204,90 @@ const Companies = () => {
                                 company.CreatedAt?.slice(0, 10),
                                 company.UpdatedBy,
                                 company.UpdatedAt?.slice(0, 10),
+
+                                // Update the EditButton in the TableRow component
                                 <span className='flex items-center gap-x-1'>
-                                    <EditButton />
+                                    <EditButton onClick={() => handleEdit(company)} />
                                     <DeleteButton
                                         deleteApiLink={`http://localhost:5000/api/setup/companies/${company._id}`}
                                         itemId={company._id}
                                         name={company.Name}
-                                        onDelete={refreshCompanies} 
+                                        onDelete={refreshCompanies}
                                     />
                                 </span>
+
+
                             ]}
                         />
                     ))}
                 </tbody>
             </table>
 
+          
+            <input type="checkbox" id="edit-company" className="modal-toggle" />
+            <label htmlFor="edit-company" className="modal cursor-pointer">
+                <label className="modal-box lg:w-7/12 md:w-10/12 w-11/12 max-w-4xl relative">
+                    <ModalCloseButton modalId={'edit-company'} />
+                    <ModalHeading modalHeading={'Update Company'} />
+                    {editingCompany && (
+                        <form onSubmit={handleUpdate} className='mx-auto'>
+                            <div className='grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2 mb-2'>
+                                <Input
+                                    title={'Company Name'}
+                                    name='companyName'
+                                    isRequired
+                                    type='text'
+                                    defaultValue={editingCompany.Name}
+                                />
+                                <Input
+                                    title={'Company Phone'}
+                                    name='companyPhone'
+                                    isRequired
+                                    type='text'
+                                    defaultValue={editingCompany.Phone}
+                                />
+                                <Input
+                                    title={'Company Website'}
+                                    name='companyWebsite'
+                                    isRequired
+                                    type='text'
+                                    defaultValue={editingCompany.Website}
+                                />
+                                <Input
+                                    title={'Company Email'}
+                                    name='companyEmail'
+                                    isRequired
+                                    type='email'
+                                    defaultValue={editingCompany.Email}
+                                />
+                                <Input
+                                    title={'Company Address'}
+                                    name='companyAddress'
+                                    isRequired
+                                    type='text'
+                                    defaultValue={editingCompany.Address}
+                                />
+                            </div>
+                            <div className="flex flex-col w-full lg:flex-row mt-4 place-content-center">
+                                <div className="grid">
+                                    <SaveButton extraClass='mt-4' />
+                                </div>
+                                <div className="divider lg:divider-horizontal hidden md:block lg:block"></div>
+                                <div className="grid">
+                                    <CancelButton
+                                        extraClass='lg:mt-4 md:mt-3 mt-2'
+                                        onClick={() => {
+                                            document.getElementById('edit-company').checked = false;
+                                            setEditingCompany(null);
+                                            setIsEditing(false);
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        </form>
+                    )}
+                </label>
+            </label>
             {/* Success Modal */}
             {showModal && <AddModal name={newCompany} onClose={() => setShowModal(false)} />}
         </section>
