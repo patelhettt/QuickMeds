@@ -17,6 +17,7 @@ import DeleteButton from '../../../components/buttons/DeleteButton';
 import { toast } from 'react-toastify';
 import DashboardPageHeading from '../../../components/headings/DashboardPageHeading';
 import AddModal from '../../../components/modals/AddModal';
+import axios from 'axios';
 
 const PharmacyItems = () => {
     const tableHeadItems = ['SN', 'Code', 'Product name', 'Category', 'Strength', 'Company', 'Stock', 'Pack Type', 'Pack Size', 'Pack TP', 'Pack MRP', 'Unit TP', 'Unit MRP', 'Creator', 'Created At', 'Actions'];
@@ -93,7 +94,59 @@ const PharmacyItems = () => {
         fetchItems();
     }, []);
 
+    // Add these state variables at the top with other useState declarations
+    const [requestingItem, setRequestingItem] = useState(null);
+    const [requestQuantity, setRequestQuantity] = useState(1);
+    const token = localStorage.getItem('token');
+    const user = JSON.parse(localStorage.getItem('user'));
+    const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+
+    // Add these functions before the return statement
+    const handleRequestItem = async (item) => {
+        setRequestingItem(item);
+        document.getElementById('request-item-modal').checked = true;
+    };
+
+    const submitRequest = async (event) => {
+        event.preventDefault();
+        try {
+            const requestData = {
+                itemId: requestingItem._id,
+                quantity: requestQuantity,
+                requestedBy: user._id,
+                storeName: user.store_name,
+                status: 'pending',
+                requestedAt: new Date()
+            };
+
+            const response = await axios.post(
+                `${API_URL}/api/products/requests`,
+                requestData,
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                }
+            );
+
+            if (response.data) {
+                toast.success('Request submitted successfully');
+                document.getElementById('request-item-modal').checked = false;
+                setRequestingItem(null);
+                setRequestQuantity(1);
+            }
+        } catch (error) {
+            console.error('Request error:', error);
+            toast.error(error.response?.data?.message || 'Failed to submit request');
+        }
+    };
+
+
     return (
+
+
+
         <section className='p-4 mt-16'>
             <DashboardPageHeading
                 name='Pharmacy Requested Items'
@@ -169,111 +222,92 @@ const PharmacyItems = () => {
                 </label>
             </label>
 
-            {/* update a pharmacy product */}
-            <input type="checkbox" id="update-pharmacy-product" className="modal-toggle" />
-            <label htmlFor="update-pharmacy-product" className="modal cursor-pointer">
-                <label className="modal-box lg:w-7/12 md:w-10/12 w-11/12 max-w-4xl relative" htmlFor="">
-                    <ModalCloseButton modalId={'update-pharmacy-product'} />
-
-                    <ModalHeading modalHeading={'Update a Pharmacy Product'} />
-
-                    <form>
-                        <div className='grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1 mb-2'>
-                            <Input title={'Trade Name'} name='tradeName' />
-                            <Input title={'Generic Name'} name='genericName' />
-                            <Input title={'Strength'} name='strength' />
-
-                            <Select title={'Category'} />
-                            <Select title={'Company'} />
-                        </div>
-
-                        <div className="flex flex-col w-full lg:flex-row mt-4 place-content-center">
-                            <div className="grid">
-                                <h3 className='text-xl'>Purchase Area</h3>
-
-                                <div className='grid grid-cols-2 gap-x-4'>
-                                    <Select title={'Purchase Unit Type'} />
-                                    <Input title={'Pack Size'} name='packSize' />
-                                </div>
-
-                                <div className='grid grid-cols-2 gap-x-4'>
-                                    <Input title={'Pack TP'} name='packTp' />
-                                    <Input title={'Unit TP'} name='unitTp' />
-                                </div>
-
-                                <DoubleInput title={'Purchase VAT'} />
-                                <DoubleInput title={'Purchase Discount'} />
-
-                                <SaveButton extraClass='mt-4' />
-                            </div>
-
-                            <div className="divider lg:divider-horizontal"></div>
-
-                            <div className="grid">
-                                <h3 className='text-xl'>Sale Area</h3>
-
-                                <div className='grid grid-cols-2 gap-x-4'>
-                                    <Select title={'Sales Unit Type'} />
-                                    <Input title={'Pack Size'} />
-                                </div>
-
-                                <div className='grid grid-cols-2 gap-x-4'>
-                                    <Input title={'Pack MRP'} />
-                                    <Input title={'Unit MRP'} />
-                                </div>
-
-                                <DoubleInput title={'Sales VAT'} />
-                                <DoubleInput title={'Sales Discount'} />
-
-                                <CancelButton extraClass='mt-4' />
-                            </div>
-                        </div>
-                    </form>
-                </label>
-            </label>
-
             <table className="table table-zebra table-compact">
                 <thead>
-                    {
-                        tableHead
-                    }
+                    {tableHead}
                 </thead>
                 <tbody>
-                    {
-                        pharmacyItems.map((product, index) =>
-                            <TableRow
-                                key={product._id}
-                                tableRowsData={
-                                    [
-                                        index + 1,
-                                        product.genericName,
-                                        product.tradeName,
-                                        product.category,
-                                        product.strength,
-                                        product.company,
-                                        product.stock,
-                                        product.packType,
-                                        product.salePackSize,
-                                        product.packTp,
-                                        product.packMrp,
-                                        product.unitTp,
-                                        product.unitMrp,
-                                        product.addedBy,
-                                        product?.addedToDbAt?.slice(0, 10),
-                                        <span className='flex items-center gap-x-1'>
-                                            <EditButton />
-                                            <DeleteButton
-                                                deleteApiLink='http://localhost:5000/api/requestedItems/pharmacy/'
-                                                itemId={product._id}
-                                                name={product.tradeName}
-                                                fetchItems={fetchItems} />
-                                        </span>
-                                    ]
-                                } />)
-                    }
+                    {pharmacyItems.map((product, index) => (
+                        <TableRow
+                            key={product._id}
+                            tableRowsData={[
+                                index + 1,
+                                product.genericName,
+                                product.tradeName,
+                                product.category,
+                                product.strength,
+                                product.company,
+                                product.stock,
+                                product.packType,
+                                product.salePackSize,
+                                product.packTp,
+                                product.packMrp,
+                                product.unitTp,
+                                product.unitMrp,
+                                product.addedBy,
+                                product?.addedToDbAt?.slice(0, 10),
+                                <span className='flex items-center gap-x-1'>
+                                    <button
+                                        className="btn btn-primary btn-xs"
+                                        onClick={() => handleRequestItem(product)}
+                                    >
+                                        Request
+                                    </button>
+                                    <EditButton />
+                                    <DeleteButton
+                                        deleteApiLink={`${API_URL}/api/requestedItems/pharmacy/`}
+                                        itemId={product._id}
+                                        name={product.tradeName}
+                                        fetchItems={fetchItems}
+                                    />
+                                </span>
+                            ]}
+                        />
+                    ))}
                 </tbody>
             </table>
-        </section >
+
+            {/* Request Modal */}
+            <input type="checkbox" id="request-item-modal" className="modal-toggle" />
+            <label htmlFor="request-item-modal" className="modal cursor-pointer">
+                <label className="modal-box relative">
+                    <ModalCloseButton modalId={'request-item-modal'} />
+                    <ModalHeading modalHeading={'Request Item'} />
+                    {requestingItem && (
+                        <form onSubmit={submitRequest} className='space-y-4'>
+                            <div className='text-lg'>
+                                <p><strong>Item:</strong> {requestingItem.tradeName}</p>
+                                <p><strong>Available Stock:</strong> {requestingItem.stock}</p>
+                            </div>
+                            <div className="form-control">
+                                <label className="label">
+                                    <span className="label-text">Quantity</span>
+                                </label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max={requestingItem.stock}
+                                    value={requestQuantity}
+                                    onChange={(e) => setRequestQuantity(Number(e.target.value))}
+                                    className="input input-bordered"
+                                    required
+                                />
+                            </div>
+                            <div className="flex justify-end space-x-2">
+                                <SaveButton text="Submit Request" />
+                                <CancelButton
+                                    onClick={() => {
+                                        document.getElementById('request-item-modal').checked = false;
+                                        setRequestingItem(null);
+                                        setRequestQuantity(1);
+                                    }}
+                                />
+                            </div>
+                        </form>
+                    )}
+                </label>
+            </label>
+        </section>
     );
 };
 

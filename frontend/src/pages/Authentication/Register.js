@@ -16,7 +16,10 @@ const Register = () => {
         email: '',
         password: '',
         confirmPassword: '',
-        role : '',
+        phone: '',
+        city: '',
+        store_name: '',
+        role: ''// Add phone to the state
     });
 
     const handleChange = (e) => {
@@ -25,15 +28,15 @@ const Register = () => {
 
     const handleRegister = async (event) => {
         event.preventDefault();
-    
-        const { firstName, lastName, email, password, confirmPassword, role} = formData;
-        
+
+        const { firstName, lastName, email, password, confirmPassword, phone, city, store_name, role } = formData;
+
         // Basic validation
-        if (!firstName || !lastName || !email || !password || !confirmPassword || !role) {
+        if (!firstName || !lastName || !email || !password || !confirmPassword || !role || !city || !store_name || !phone) {
             toast.error('Please fill in all fields');
             return;
         }
-    
+
         // Password validation rules
         const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
         if (!passwordRegex.test(password)) {
@@ -42,17 +45,18 @@ const Register = () => {
             );
             return;
         }
-    
+
         // Confirm password validation
         if (password !== confirmPassword) {
             toast.error("Passwords do not match.");
             return;
         }
-    
+
         setIsLoading(true);
-        
+
         try {
-            const response = await axios.post("http://localhost:5000/api/products/auth/register", formData);
+            // This should match the route in backend/index.js
+            const response = await axios.post("http://localhost:5000/api/products/auth/register", formData); 
             toast.success(response.data.message || 'Registration successful!');
             navigate('/login'); // Redirect to login page after successful registration
         } catch (error) {
@@ -61,7 +65,7 @@ const Register = () => {
             setIsLoading(false);
         }
     };
-    
+
     return (
         <div>
             <DefaultNavbar />
@@ -77,7 +81,7 @@ const Register = () => {
                                 <h1 className="text-4xl font-bold"><span className="text-secondary">Join</span> QuickMeds</h1>
                                 <p className="py-4 text-neutral">Create your account to access our medicine management platform.</p>
                             </div>
-                            
+
                             <div className="card bg-base-100 shadow-xl">
                                 <div className="card-body">
                                     <form onSubmit={handleRegister} className="space-y-4">
@@ -90,17 +94,17 @@ const Register = () => {
                                                     <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                                                         <FaUser className="text-gray-400" />
                                                     </div>
-                                                    <input 
-                                                        name="firstName" 
+                                                    <input
+                                                        name="firstName"
                                                         value={formData.firstName}
-                                                        onChange={handleChange} 
-                                                        type="text" 
-                                                        placeholder="First Name" 
-                                                        className="input input-bordered w-full pl-10" 
+                                                        onChange={handleChange}
+                                                        type="text"
+                                                        placeholder="First Name"
+                                                        className="input input-bordered w-full pl-10"
                                                     />
                                                 </div>
                                             </div>
-                                            
+
                                             <div className="form-control">
                                                 <label className="label">
                                                     <span className="label-text font-medium">Last Name</span>
@@ -109,18 +113,18 @@ const Register = () => {
                                                     <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                                                         <FaUser className="text-gray-400" />
                                                     </div>
-                                                    <input 
-                                                        name="lastName" 
+                                                    <input
+                                                        name="lastName"
                                                         value={formData.lastName}
-                                                        onChange={handleChange} 
-                                                        type="text" 
-                                                        placeholder="Last Name" 
-                                                        className="input input-bordered w-full pl-10" 
+                                                        onChange={handleChange}
+                                                        type="text"
+                                                        placeholder="Last Name"
+                                                        className="input input-bordered w-full pl-10"
                                                     />
                                                 </div>
                                             </div>
                                         </div>
-                                        
+
                                         <div className="form-control">
                                             <label className="label">
                                                 <span className="label-text font-medium">Email</span>
@@ -129,33 +133,17 @@ const Register = () => {
                                                 <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                                                     <FaEnvelope className="text-gray-400" />
                                                 </div>
-                                                <input 
-                                                    name="email" 
+                                                <input
+                                                    name="email"
                                                     value={formData.email}
-                                                    onChange={handleChange} 
-                                                    type="email" 
-                                                    placeholder="Email Address" 
-                                                    className="input input-bordered w-full pl-10" 
+                                                    onChange={handleChange}
+                                                    type="email"
+                                                    placeholder="Email Address"
+                                                    className="input input-bordered w-full pl-10"
                                                 />
                                             </div>
                                         </div>
-                                        <div className="form-control">
-                                            <label className="label">
-                                                <span className="label-text font-medium">Request For Role</span>
-                                            </label>
-                                            <div className="relative">
-                                                <select 
-                                                    name="role" 
-                                                    value={formData.role} 
-                                                    onChange={handleChange} 
-                                                    className="select select-bordered w-full"
-                                                >
-                                                    <option value="">Select Role</option>
-                                                    <option value="Admin">Admin</option>
-                                                    <option value="Employee">Employee</option>
-                                                </select>
-                                            </div>
-                                        </div>
+
 
                                         <div className="form-control">
                                             <label className="label">
@@ -165,20 +153,20 @@ const Register = () => {
                                                 <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                                                     <FaLock className="text-gray-400" />
                                                 </div>
-                                                <input 
-                                                    name="password" 
+                                                <input
+                                                    name="password"
                                                     value={formData.password}
-                                                    onChange={handleChange} 
-                                                    type="password" 
-                                                    placeholder="Create Password" 
-                                                    className="input input-bordered w-full pl-10" 
+                                                    onChange={handleChange}
+                                                    type="password"
+                                                    placeholder="Create Password"
+                                                    className="input input-bordered w-full pl-10"
                                                 />
                                             </div>
                                             <label className="label">
                                                 <span className="label-text-alt text-gray-500">Must be at least 8 characters with uppercase, lowercase, number and special character</span>
                                             </label>
                                         </div>
-                                        
+
                                         <div className="form-control">
                                             <label className="label">
                                                 <span className="label-text font-medium">Confirm Password</span>
@@ -187,32 +175,97 @@ const Register = () => {
                                                 <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                                                     <FaLock className="text-gray-400" />
                                                 </div>
-                                                <input 
-                                                    name="confirmPassword" 
+                                                <input
+                                                    name="confirmPassword"
                                                     value={formData.confirmPassword}
-                                                    onChange={handleChange} 
-                                                    type="password" 
-                                                    placeholder="Confirm Password" 
-                                                    className="input input-bordered w-full pl-10" 
+                                                    onChange={handleChange}
+                                                    type="password"
+                                                    placeholder="Confirm Password"
+                                                    className="input input-bordered w-full pl-10"
                                                 />
                                             </div>
                                         </div>
 
+                                        <div className="form-control">
+                                            <label className="label">
+                                                <span className="label-text font-medium">Phone Number</span>
+                                            </label>
+                                            <div className="relative">
+                                                <input
+                                                    name="phone"
+                                                    value={formData.phone}
+                                                    onChange={handleChange}
+                                                    type="tel"
+                                                    placeholder="Enter your phone number"
+                                                    className="input input-bordered w-full"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="form-control">
+                                            <label className="label">
+                                                <span className="label-text font-medium">City</span>
+                                            </label>
+                                            <div className="relative">
+                                                <input
+                                                    name="city"
+                                                    value={formData.city}
+                                                    onChange={handleChange}
+                                                    type="text"
+                                                    placeholder="Enter your city"
+                                                    className="input input-bordered w-full"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="form-control">
+                                            <label className="label">
+                                                <span className="label-text font-medium">Store Name</span>
+                                            </label>
+                                            <div className="relative">
+                                                <input
+                                                    name="store_name"
+                                                    value={formData.store_name}
+                                                    onChange={handleChange}
+                                                    type="text"
+                                                    placeholder="Enter store name"
+                                                    className="input input-bordered w-full"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="form-control">
+                                            <label className="label">
+                                                <span className="label-text font-medium">Request For Role</span>
+                                            </label>
+                                            <div className="relative">
+                                                <select
+                                                    name="role"
+                                                    value={formData.role}
+                                                    onChange={handleChange}
+                                                    className="select select-bordered w-full"
+                                                >
+                                                    <option value="">Select Role</option>
+                                                    <option value="Admin">Admin</option>
+                                                    <option value="Employee">Employee</option>
+                                                </select>
+                                            </div>
+                                        </div>
                                         <div className="form-control mt-6">
-                                            <button 
-                                                type="submit" 
+                                            <button
+                                                type="submit"
                                                 className={`btn border-0 bg-secondary hover:bg-primary text-white w-full ${isLoading ? 'loading' : ''}`}
                                                 disabled={isLoading}
                                             >
                                                 {isLoading ? 'Creating Account...' : 'Register'}
                                             </button>
                                         </div>
-                                        
+
                                         <div className="divider text-xs text-gray-400">OR</div>
-                                        
+
                                         <div className="text-center">
-                                            <Link 
-                                                to='/login' 
+                                            <Link
+                                                to='/login'
                                                 className="inline-flex items-center text-secondary hover:text-primary transition-colors"
                                             >
                                                 <FaSignInAlt className="mr-2" />
@@ -222,7 +275,7 @@ const Register = () => {
                                     </form>
                                 </div>
                             </div>
-                            
+
                             <div className="mt-6 text-center text-sm">
                                 <p>Need help? <Link to="/contact" className="text-secondary hover:underline">Contact Support</Link></p>
                             </div>
@@ -236,3 +289,7 @@ const Register = () => {
 };
 
 export default Register;
+
+
+
+//@Dmin123

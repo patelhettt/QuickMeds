@@ -3,59 +3,63 @@ const bcrypt = require("bcryptjs");
 const User = require("../api/models/User");
 const router = express.Router();
 
+
 // @route   POST /api/auth/register
 // @desc    Register a new user
+// Update the registration endpoint to match User model
 router.post("/register", async (req, res) => {
     try {
-        const { name, email, password, userType } = req.body;
+        // Receive firstName and lastName directly from request
+        const { firstName, lastName, email, password, confirmPassword, phone, city, store_name, role } = req.body;
 
         // Validate required fields
-        if (!name || !email || !password || !userType) {
-            return res.status(400).json({ message: "All fields are required" });
+        if (!firstName || !lastName || !email || !password || !confirmPassword) {
+            return res.status(400).json({ message: "All required fields must be provided" });
         }
 
-        // Split the name into firstName and lastName
-        const [firstName, lastName] = name.split(' ');
-        if (!firstName || !lastName) {
-            return res.status(400).json({ message: "Please provide both first and last names" });
+        // Remove name splitting logic
+        if (password !== confirmPassword) {
+            return res.status(400).json({ message: "Passwords do not match" });
         }
 
-        // Validate email format
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
-            return res.status(400).json({ message: "Invalid email format" });
-        }
-
-        // Validate password length
-        if (password.length < 6) {
-            return res.status(400).json({ message: "Password must be at least 6 characters long" });
-        }
-
-        // Check if user already exists
+        // Keep existing email validation
         const existingUser = await User.findOne({ email });
         if (existingUser) {
-            return res.status(400).json({ message: "A user with this email already exists" });
+            return res.status(400).json({ message: "User already exists" });
         }
 
-        // Hash the password
-        const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS) || 10;
-        const salt = await bcrypt.genSalt(saltRounds);
+        // Hash password
+        const salt = await bcrypt.genSalt(parseInt(process.env.BCRYPT_SALT_ROUNDS) || 10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        // Create new user
+        // Create user with all fields
         const newUser = new User({
             firstName,
             lastName,
             email,
             password: hashedPassword,
-            userType
+            phone,
+            city,
+            store_name,
+            role: role || 'employee'
         });
+
         await newUser.save();
-        res.status(201).json({ message: "User registered successfully" });
+        res.status(201).json({ 
+            message: "User registered successfully",
+            userId: newUser._id
+        });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Server error" });
+        console.error("Registration error:", error);
+        res.status(500).json({ message: "Server error", error: error.message });
     }
 });
 
+
+// Get single user by ID
+// Change the route path to match the frontend request
+// Update the user retrieval logic
+
+
+// Add this at the bottom if missing
 module.exports = router;

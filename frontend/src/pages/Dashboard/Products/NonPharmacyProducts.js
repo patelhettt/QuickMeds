@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import SaveButton from '../../../components/buttons/SaveButton';
 import CancelButton from '../../../components/buttons/CancelButton';
 import PrintButton from '../../../components/buttons/PrintButton';
@@ -38,15 +39,72 @@ const NonPharmacyProducts = () => {
         document.getElementById('create-new-product').checked = true;
     };
 
+
+    const handleRefresh = () => {
+        fetchProducts(currentPage, productsPerPage);
+    }; 
+    const fetchDropdownData = async () => {
+        try {
+            const [categoriesRes, companiesRes, unitTypesRes] = await Promise.all([
+                axios.get(`http://localhost:5000/api/setup/categories`),
+                axios.get(`http://localhost:5000/api/setup/companies`),
+                axios.get(`http://localhost:5000/api/setup/unitTypes`)
+            ]);
+    
+            // Categories
+            const categoriesData = categoriesRes.data;
+            if (Array.isArray(categoriesData)) {
+                setCategories(categoriesData);
+            } else if (categoriesData.data && Array.isArray(categoriesData.data)) {
+                setCategories(categoriesData.data);
+            } else {
+                toast.error("Invalid categories data format");
+            }
+    
+            // Companies
+            const companiesData = companiesRes.data;
+            if (Array.isArray(companiesData)) {
+                setCompanies(companiesData);
+            } else if (companiesData.data && Array.isArray(companiesData.data)) {
+                setCompanies(companiesData.data);
+            } else {
+                toast.error("Invalid companies data format");
+            }
+    
+            // Unit Types
+            const unitTypesData = unitTypesRes.data;
+            if (Array.isArray(unitTypesData)) {
+                setUnitTypes(unitTypesData);
+            } else if (unitTypesData.data && Array.isArray(unitTypesData.data)) {
+                setUnitTypes(unitTypesData.data);
+            } else {
+                toast.error("Invalid unit types data format");
+            }
+        } catch (error) {
+            console.error('Error fetching dropdown data:', error);
+            toast.error('Failed to load form data');
+        }
+    };
+
+    // Update fetchProducts to use axios
+    const fetchProducts = async (page = 1, limit = productsPerPage) => {
+        try {
+            const response = await axios.get(`${API_BASE_URL}?page=${page}&limit=${limit}`);
+            const data = response.data;
+            setNonPharmacyProducts(data.data);
+            setTotalProducts(data.totalItems);
+            setTotalPages(data.totalPages);
+        } catch (error) {
+            console.error('Error fetching products:', error);
+            toast.error(error.response?.data?.message || 'Failed to fetch products');
+        }
+    };
+
+    // Update handleOpenEditModal to use axios
     const handleOpenEditModal = async (productId) => {
         try {
-            const response = await fetch(`${API_BASE_URL}/${productId}`);
-            
-            if (!response.ok) {
-                throw new Error(`Failed to fetch product: ${response.status}`);
-            }
-            
-            const productData = await response.json();
+            const response = await axios.get(`${API_BASE_URL}/${productId}`);
+            const productData = response.data;
             const productToEdit = productData.data || productData;
             
             setCurrentProduct(productToEdit);
@@ -62,126 +120,43 @@ const NonPharmacyProducts = () => {
         }
     };
 
-    const handleRefresh = () => {
-        fetchProducts(currentPage, productsPerPage);
-    };
-
-    const fetchDropdownData = async () => {
-        try {
-            const [categoriesRes, companiesRes, unitTypesRes] = await Promise.all([
-                fetch(`http://localhost:5000/api/setup/categories`),
-                fetch(`http://localhost:5000/api/setup/companies`),
-                fetch(`http://localhost:5000/api/setup/unitTypes`)
-            ]);
-
-            if (categoriesRes.ok) {
-                const categoriesData = await categoriesRes.json();
-                if (Array.isArray(categoriesData)) {
-                    setCategories(categoriesData);
-                } else if (categoriesData.data && Array.isArray(categoriesData.data)) {
-                    setCategories(categoriesData.data);
-                } else {
-                    toast.error("Invalid categories data format");
-                }
-            } else {
-                toast.error("Failed to load categories");
-            }
-
-            if (companiesRes.ok) {
-                const companiesData = await companiesRes.json();
-                if (Array.isArray(companiesData)) {
-                    setCompanies(companiesData);
-                } else if (companiesData.data && Array.isArray(companiesData.data)) {
-                    setCompanies(companiesData.data);
-                } else {
-                    toast.error("Invalid companies data format");
-                }
-            } else {
-                toast.error("Failed to load companies");
-            }
-
-            if (unitTypesRes.ok) {
-                const unitTypesData = await unitTypesRes.json();
-                if (Array.isArray(unitTypesData)) {
-                    setUnitTypes(unitTypesData);
-                } else if (unitTypesData.data && Array.isArray(unitTypesData.data)) {
-                    setUnitTypes(unitTypesData.data);
-                } else {
-                    toast.error("Invalid unit types data format");
-                }
-            } else {
-                toast.error("Failed to load unit types");
-            }
-        } catch (error) {
-            toast.error('Failed to load form data');
-        }
-    };
-
-    const fetchProducts = async (page = 1, limit = productsPerPage) => {
-        try {
-            const response = await fetch(`${API_BASE_URL}?page=${page}&limit=${limit}`);
-            const data = await response.json();
-            if (response.ok) {
-                setNonPharmacyProducts(data.data);
-                setTotalProducts(data.totalItems);
-                setTotalPages(data.totalPages);
-            } else {
-                console.error('Error fetching products:', data);
-                toast.error('Failed to fetch products');
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            toast.error('Network error occurred');
-        }
-    };
-
-    useEffect(() => {
-        fetchProducts(currentPage, productsPerPage);
-    }, [currentPage, productsPerPage]);
-
-    useEffect(() => {
-        fetchDropdownData();
-    }, []);
-
+    
     const addNonPharmacyProduct = async (event) => {
         event.preventDefault();
         const formData = new FormData(event.target);
         const productDetails = Object.fromEntries(formData.entries());
-
+    
         const requiredFields = ['tradeName', 'category', 'company', 'unitType'];
         const missingFields = requiredFields.filter(field => !productDetails[field]);
-
+    
         if (missingFields.length > 0) {
             toast.error(`Missing required fields: ${missingFields.join(', ')}`);
             return;
         }
-
+    
         productDetails.addedBy = 'admin';
         productDetails.addedToDbAt = new Date().toISOString();
-
+    
         try {
-            const response = await fetch(API_BASE_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(productDetails)
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                document.getElementById('create-new-product').checked = false;
-                toast.success('Product added successfully');
-                fetchProducts(currentPage, productsPerPage);
-                event.target.reset();
-            } else {
-                toast.error(`Failed to add product: ${data.error || 'Unknown error'}`);
-            }
+            const response = await axios.post(
+                API_BASE_URL, 
+                productDetails, 
+                {
+                    headers: { 'Content-Type': 'application/json' }
+                }
+            );
+    
+            document.getElementById('create-new-product').checked = false;
+            toast.success('Product added successfully');
+            fetchProducts(currentPage, productsPerPage);
+            event.target.reset();
         } catch (error) {
-            console.error('Error:', error);
-            toast.error('Network error occurred');
+            console.error('Error adding product:', error);
+            toast.error(error.response?.data?.message || 'Failed to add product');
         }
     };
 
+    // Update updateNonPharmacyProduct to use axios
     const updateNonPharmacyProduct = async (event) => {
         event.preventDefault();
         
@@ -203,28 +178,35 @@ const NonPharmacyProducts = () => {
         productDetails.updatedAt = new Date().toISOString();
         
         try {
-            const response = await fetch(`${API_BASE_URL}/${currentProduct._id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(productDetails),
-            });
-
-            if (response.ok) {
-                toast.success('Product updated successfully');
-                document.getElementById('edit-product').checked = false;
-                fetchProducts(currentPage, productsPerPage);
-                setCurrentProduct(null);
-            } else {
-                const errorData = await response.json();
-                toast.error(`Failed to update product: ${errorData.message || 'Unknown error'}`);
-            }
+            const response = await axios.put(
+                `${API_BASE_URL}/${currentProduct._id}`,
+                productDetails,
+                {
+                    headers: { 'Content-Type': 'application/json' }
+                }
+            );
+    
+            toast.success('Product updated successfully');
+            document.getElementById('edit-product').checked = false;
+            fetchProducts(currentPage, productsPerPage);
+            setCurrentProduct(null);
         } catch (error) {
             console.error('Error updating product:', error);
-            toast.error(`Error updating product: ${error.message}`);
+            toast.error(error.response?.data?.message || 'Failed to update product');
         }
     };
+
+    useEffect(() => {
+        fetchProducts(currentPage, productsPerPage);
+    }, [currentPage, productsPerPage]);
+
+    useEffect(() => {
+        fetchDropdownData();
+    }, []);
+
+    
+
+   
 
     return (
         <section className='p-4 mt-16'>
@@ -337,11 +319,10 @@ const NonPharmacyProducts = () => {
                                     product.category,
                                     product.company,
                                     product.stock || 0,
+                                    // In the TableRow component, update the EditButton implementation
                                     <span className='flex items-center gap-x-1'>
                                         <EditButton 
-                                            id={product._id} 
-                                            apiEndpoint="nonPharmacy"
-                                            onClick={handleOpenEditModal}
+                                            onClick={() => handleOpenEditModal(product._id)} 
                                         />
                                         <DeleteButton
                                             deleteApiLink={`${API_BASE_URL}/${product._id}`}

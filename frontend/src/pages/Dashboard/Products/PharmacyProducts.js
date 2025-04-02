@@ -15,8 +15,9 @@ import DeleteButton from '../../../components/buttons/DeleteButton';
 import { toast } from 'react-toastify';
 import DashboardPageHeading from '../../../components/headings/DashboardPageHeading';
 import AddModal from '../../../components/modals/AddModal';
+import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:5000/api/products/pharmacy'; 
+const API_BASE_URL = 'http://localhost:5000/api/products/pharmacy';
 
 const NonPharmacyProducts = () => {
     const [pharmacyProducts, setPharmacyProducts] = useState([]);
@@ -28,6 +29,58 @@ const NonPharmacyProducts = () => {
     const [totalProducts, setTotalProducts] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
     const [isModalOpen, setIsModalOpen] = useState(false);
+
+
+    // Add these state variables at the top with other state declarations
+    const [isEditing, setIsEditing] = useState(false);
+    const [editingProduct, setEditingProduct] = useState(null);
+
+    // Add this function before the return statement
+    const handleEdit = (product) => {
+        setEditingProduct(product);
+        setIsEditing(true);
+        document.getElementById('edit-product').checked = true;
+    };
+
+    const handleUpdate = async (event) => {
+        event.preventDefault();
+        try {
+            const formData = new FormData(event.target);
+            const updatedData = {
+                tradeName: formData.get('tradeName')?.trim(),
+                genericName: formData.get('genericName')?.trim(),
+                strength: formData.get('strength'),
+                category: formData.get('category'),
+                company: formData.get('company'),
+                unitType: formData.get('unitType')
+            };
+    
+            if (!updatedData.tradeName || !updatedData.genericName || !updatedData.strength ||
+                !updatedData.category || !updatedData.company || !updatedData.unitType) {
+                toast.error("All fields are required");
+                return;
+            }
+    
+            const response = await axios.put(
+                `${API_BASE_URL}/${editingProduct._id}`, 
+                updatedData, 
+                {
+                    headers: { 'Content-Type': 'application/json' }
+                }
+            );
+    
+            toast.success("Product updated successfully");
+            fetchProducts(currentPage, productsPerPage);
+            document.getElementById('edit-product').checked = false;
+            setEditingProduct(null);
+            setIsEditing(false);
+        } catch (error) {
+            console.error("Update error:", error);
+            toast.error(error.response?.data?.message || "Failed to update product");
+        }
+    };
+
+
 
     // Function to handle opening the modal
     const handleOpenModal = () => {
@@ -49,76 +102,61 @@ const NonPharmacyProducts = () => {
     const fetchDropdownData = async () => {
         try {
             const [categoriesRes, companiesRes, unitTypesRes] = await Promise.all([
-                fetch(`http://localhost:5000/api/setup/categories`),
-                fetch(`http://localhost:5000/api/setup/companies`),
-                fetch(`http://localhost:5000/api/setup/unitTypes`)
+                axios.get(`http://localhost:5000/api/setup/categories`),
+                axios.get(`http://localhost:5000/api/setup/companies`),
+                axios.get(`http://localhost:5000/api/setup/unitTypes`)
             ]);
-            
-            if (categoriesRes.ok) {
-                const categoriesData = await categoriesRes.json();
-                // Check if the data is in the expected format
-                if (Array.isArray(categoriesData)) {
-                    setCategories(categoriesData);
-                } else if (categoriesData.data && Array.isArray(categoriesData.data)) {
-                    setCategories(categoriesData.data);
-                } else {
-                    toast.error("Invalid categories data format");
-                }
+    
+            // Categories
+            const categoriesData = categoriesRes.data;
+            if (Array.isArray(categoriesData)) {
+                setCategories(categoriesData);
+            } else if (categoriesData.data && Array.isArray(categoriesData.data)) {
+                setCategories(categoriesData.data);
             } else {
-                toast.error("Failed to load categories");
+                toast.error("Invalid categories data format");
             }
-            
-            if (companiesRes.ok) {
-                const companiesData = await companiesRes.json();
-                // Check if the data is in the expected format
-                if (Array.isArray(companiesData)) {
-                    setCompanies(companiesData);
-                } else if (companiesData.data && Array.isArray(companiesData.data)) {
-                    setCompanies(companiesData.data);
-                } else {
-                    toast.error("Invalid companies data format");
-                }
+    
+            // Companies
+            const companiesData = companiesRes.data;
+            if (Array.isArray(companiesData)) {
+                setCompanies(companiesData);
+            } else if (companiesData.data && Array.isArray(companiesData.data)) {
+                setCompanies(companiesData.data);
             } else {
-                toast.error("Failed to load companies");
+                toast.error("Invalid companies data format");
             }
-            
-            if (unitTypesRes.ok) {
-                const unitTypesData = await unitTypesRes.json();
-                // Check if the data is in the expected format
-                if (Array.isArray(unitTypesData)) {
-                    setUnitTypes(unitTypesData);
-                } else if (unitTypesData.data && Array.isArray(unitTypesData.data)) {
-                    setUnitTypes(unitTypesData.data);
-                } else {
-                    toast.error("Invalid unit types data format");
-                }
+    
+            // Unit Types
+            const unitTypesData = unitTypesRes.data;
+            if (Array.isArray(unitTypesData)) {
+                setUnitTypes(unitTypesData);
+            } else if (unitTypesData.data && Array.isArray(unitTypesData.data)) {
+                setUnitTypes(unitTypesData.data);
             } else {
-                toast.error("Failed to load unit types");
+                toast.error("Invalid unit types data format");
             }
         } catch (error) {
+            console.error('Error fetching dropdown data:', error);
             toast.error('Failed to load form data');
         }
     };
+    
 
     // Fetch paginated products
     const fetchProducts = async (page = 1, limit = productsPerPage) => {
         try {
-            const response = await fetch(`${API_BASE_URL}?page=${page}&limit=${limit}`);
-            const data = await response.json();
-            if (response.ok) {
-                setPharmacyProducts(data.data);
-                setTotalProducts(data.totalItems);
-                setTotalPages(data.totalPages);
-            } else {
-                console.error('Error fetching products:', data);
-                toast.error('Failed to fetch products');
-            }
+            const response = await axios.get(`${API_BASE_URL}?page=${page}&limit=${limit}`);
+            const data = response.data;
+            setPharmacyProducts(data.data);
+            setTotalProducts(data.totalItems);
+            setTotalPages(data.totalPages);
         } catch (error) {
-            console.error('Error:', error);
-            toast.error('Network error occurred');
+            console.error('Error fetching products:', error);
+            toast.error(error.response?.data?.message || 'Failed to fetch products');
         }
     };
-
+    
 
     // Fetch products when the page changes
     useEffect(() => {
@@ -134,47 +172,42 @@ const NonPharmacyProducts = () => {
         event.preventDefault();
         const formData = new FormData(event.target);
         const productDetails = Object.fromEntries(formData.entries());
-        
+    
         // Check for required fields
         const requiredFields = ['tradeName', 'genericName', 'strength', 'category', 'company', 'unitType'];
         const missingFields = requiredFields.filter(field => !productDetails[field]);
-        
+    
         if (missingFields.length > 0) {
             toast.error(`Missing required fields: ${missingFields.join(', ')}`);
             return;
         }
-        
+    
         // Add metadata
         productDetails.addedBy = 'admin';
         productDetails.addedToDbAt = new Date().toISOString();
-
+    
         try {
-            const response = await fetch(API_BASE_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(productDetails)
-            });
-            
-            const data = await response.json();
-            
-            if (response.ok) {
-                // Close the modal
-                document.getElementById('create-new-product').checked = false;
-                
-                // Show success message
-                toast.success(<AddModal name={productDetails.tradeName} />);
-                
-                // Refresh the product list
-                fetchProducts(currentPage, productsPerPage);
-            } else {
-                console.error('Error adding product:', data);
-                toast.error(`Failed to add product: ${data.error || 'Unknown error'}`);
-            }
+            const response = await axios.post(
+                API_BASE_URL, 
+                productDetails, 
+                {
+                    headers: { 'Content-Type': 'application/json' }
+                }
+            );
+    
+            // Close the modal
+            document.getElementById('create-new-product').checked = false;
+    
+            // Show success message
+            toast.success(<AddModal name={productDetails.tradeName} />);
+    
+            // Refresh the product list
+            fetchProducts(currentPage, productsPerPage);
         } catch (error) {
-            console.error('Error:', error);
-            toast.error('Network error occurred');
+            console.error('Error adding product:', error);
+            toast.error(error.response?.data?.message || 'Failed to add product');
         }
-        
+    
         // Reset the form
         event.target.reset();
     };
@@ -233,8 +266,9 @@ const NonPharmacyProducts = () => {
                                     product.strength,
                                     product.company,
                                     product.stock,
+                                    // In the TableRow component, replace the custom button with EditButton
                                     <span className='flex items-center gap-x-1'>
-                                        <EditButton id={product._id} apiEndpoint="pharmacy" />
+                                        <EditButton onClick={() => handleEdit(product)} />
                                         <DeleteButton
                                             deleteApiLink={`${API_BASE_URL}/${product._id}`}
                                             itemId={product._id}
@@ -319,8 +353,74 @@ const NonPharmacyProducts = () => {
                     </button>
                 </div>
             )}
+
+            <input type="checkbox" id="edit-product" className="modal-toggle" />
+            <label htmlFor="edit-product" className="modal cursor-pointer">
+                <label className="modal-box lg:w-7/12 md:w-10/12 w-11/12 max-w-4xl relative">
+                    <ModalCloseButton modalId={'edit-product'} />
+                    <ModalHeading modalHeading={'Update Product'} />
+                    {editingProduct && (
+                        <form onSubmit={handleUpdate}>
+                            <div className='grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2 mb-2'>
+                                <Input
+                                    title={'Trade Name'}
+                                    type='text'
+                                    name='tradeName'
+                                    required
+                                    defaultValue={editingProduct.tradeName}
+                                />
+                                <Input
+                                    title={'Generic Name'}
+                                    type='text'
+                                    name='genericName'
+                                    required
+                                    defaultValue={editingProduct.genericName}
+                                />
+                                <Input
+                                    title={'Strength'}
+                                    type='number'
+                                    name='strength'
+                                    required
+                                    defaultValue={editingProduct.strength}
+                                />
+                                <Select
+                                    title={'Category'}
+                                    name='category'
+                                    isRequired='required'
+                                    options={categories.map(c => c.Name)}
+                                    defaultValue={editingProduct.category}
+                                />
+                                <Select
+                                    title={'Company'}
+                                    name='company'
+                                    isRequired='required'
+                                    options={companies.map(c => c.Name)}
+                                    defaultValue={editingProduct.company}
+                                />
+                                <Select
+                                    title={'Unit Type'}
+                                    name='unitType'
+                                    isRequired='required'
+                                    options={unitTypes.map(u => u.Name)}
+                                    defaultValue={editingProduct.unitType}
+                                />
+                            </div>
+                            <div className="flex gap-2 mt-4">
+                                <SaveButton />
+                                <CancelButton onClick={() => {
+                                    document.getElementById('edit-product').checked = false;
+                                    setEditingProduct(null);
+                                    setIsEditing(false);
+                                }} />
+                            </div>
+                        </form>
+                    )}
+                </label>
+            </label>
         </section>
     );
 };
 
 export default NonPharmacyProducts;
+
+{/* Add this edit modal before the closing section tag */ }
