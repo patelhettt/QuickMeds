@@ -1,59 +1,115 @@
-# inventory-management-system-server
+# QuickMeds Backend
 
-<br>
-<br>
+This is the backend server for the QuickMeds application, a comprehensive pharmacy and inventory management system.
 
-<!-- connect with me start -->
-<div align="center"> 
-    <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&duration=1&pause=1000&repeat=false&width=410&lines=%F0%9F%93%AA+%F0%9D%97%99%F0%9D%97%98%F0%9D%97%98%F0%9D%97%9F+%F0%9D%97%99%F0%9D%97%A5%F0%9D%97%98%F0%9D%97%98+%F0%9D%97%A7%F0%9D%97%A2+%F0%9D%97%96%F0%9D%97%A2%F0%9D%97%A1%F0%9D%97%A7%F0%9D%97%94%F0%9D%97%96%F0%9D%97%A7+%F0%9D%97%A0%F0%9D%97%98+%F0%9D%97%94%F0%9D%97%A1%F0%9D%97%AC%F0%9D%97%A7%F0%9D%97%9C%F0%9D%97%A0%F0%9D%97%98" alt="Typing SVG" />
-</div>
+## Overview
 
-<br>
+The QuickMeds backend provides a RESTful API that supports all the functionality needed for pharmacy management, including:
 
-<!-- social media links start -->
-<table align="center">
-  <thead align="center">
-      <tr>
-          <th>
-              <a href="https://www.linkedin.com/in/montasim">
-                  <img alt="linkedin icon" src="https://cdn.simpleicons.org/linkedin" width="35px">
-              </a>
-          </th>
-          <th>
-              <a href="https://www.github.com/montasim">
-                  <img alt="github icon" src="https://cdn.simpleicons.org/github/white" width="35px">
-              </a>
-          </th>
-          <th>
-              <a href="https://stackoverflow.com/users/20348607/montasim">
-                  <img alt="github icon" src="https://cdn.simpleicons.org/stackoverflow" width="35px">
-              </a>
-          </th>
-          <th>
-              <a href="https://montasim-dev.web.app/">
-                  <img alt="web icon" src="https://cdn.simpleicons.org/googlechrome" width="35px">
-              </a>
-          </th>
-          <th>
-              <a href="mailto:montasimmamun@gmail.com">
-                  <img alt="gmail icon" src="https://cdn.simpleicons.org/gmail" width="35px">
-              </a>
-          </th>
-          <th>
-              <a href="https://www.facebook.com/montasimmamun/">
-                  <img alt="facebook icon" src="https://cdn.simpleicons.org/facebook" width="35px">
-              </a>
-          </th>
-          <th>
-              <a href="https://twitter.com/montasimmamun">
-                  <img alt="facebook icon" src="https://cdn.simpleicons.org/twitter" width="35px">
-              </a>
-          </th>
-      </tr>
-  </thead>
-</table>
-<!-- social media links end -->
-<!-- connect with me end -->
+- User authentication and authorization
+- Product inventory management (pharmacy and non-pharmacy items)
+- Order processing and tracking
+- Purchase management
+- Returns handling
+- Supplier management
+- Employee management
+- Customer records
 
-<br>
-<br>
+## Technology Stack
+
+- **Node.js**: JavaScript runtime
+- **Express**: Web framework
+- **MongoDB**: Database
+- **Mongoose**: MongoDB object modeling
+- **JWT**: Authentication
+
+## API Endpoints
+
+The API is organized into several categories:
+
+### Authentication
+- `POST /api/auth/login`: User login
+- `POST /api/auth/register`: User registration
+
+### Products
+- `GET /api/products/pharmacy`: Get all pharmacy products
+- `GET /api/products/nonPharmacy`: Get all non-pharmacy products
+- `POST /api/products`: Add a new product
+- `PUT /api/products/:id`: Update a product
+- `DELETE /api/products/:id`: Delete a product
+
+### Orders
+- `GET /api/orders/pharmacy`: Get all pharmacy orders
+- `GET /api/orders/nonPharmacy`: Get all non-pharmacy orders
+- `POST /api/orders`: Create a new order
+- `PUT /api/orders/:id`: Update an order
+- `DELETE /api/orders/:id`: Delete an order
+
+### Purchases
+- `GET /api/purchases/pharmacy`: Get all pharmacy purchases
+- `GET /api/purchases/nonPharmacy`: Get all non-pharmacy purchases
+- `POST /api/purchases`: Create a new purchase
+- `PUT /api/purchases/:id`: Update a purchase
+- `DELETE /api/purchases/:id`: Delete a purchase
+
+### Returns
+- `GET /api/returns/customers`: Get all customer returns
+- `GET /api/returns/expiresOrDamagesReturns`: Get all expired or damaged returns
+- `POST /api/returns`: Create a new return
+- `PUT /api/returns/:id`: Update a return
+- `DELETE /api/returns/:id`: Delete a return
+
+### Setup
+- `GET /api/setup/categories`: Get all categories
+- `GET /api/setup/unitTypes`: Get all unit types
+- `GET /api/setup/companies`: Get all companies
+
+### Users
+- `GET /api/products/employees`: Get all employees
+- `GET /api/products/customers`: Get all customers
+- `POST /api/users`: Create a new user
+- `PUT /api/users/:id`: Update a user
+- `DELETE /api/users/:id`: Delete a user
+
+### Suppliers
+- `GET /api/suppliers/lists`: Get all suppliers
+- `GET /api/suppliers/payments`: Get all supplier payments
+- `GET /api/suppliers/documents`: Get all supplier documents
+- `POST /api/suppliers`: Add a new supplier
+- `PUT /api/suppliers/:id`: Update a supplier
+- `DELETE /api/suppliers/:id`: Delete a supplier
+
+## Getting Started
+
+### Prerequisites
+- Node.js (v14 or higher)
+- MongoDB (local or Atlas)
+
+### Installation
+
+1. Clone the repository
+   ```
+   git clone https://github.com/your-repo/quickmeds-backend.git
+   cd quickmeds-backend
+   ```
+
+2. Install dependencies
+   ```
+   npm install
+   ```
+
+3. Create a `.env` file with the following variables:
+   ```
+   PORT=5000
+   MONGODB_URI=mongodb://localhost:27017/quickmeds
+   JWT_SECRET=your_jwt_secret
+   ```
+
+4. Start the server
+   ```
+   npm start
+   ```
+
+## Development
+
+For development with auto-restart:
