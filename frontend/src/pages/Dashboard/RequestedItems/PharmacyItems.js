@@ -145,7 +145,7 @@ const PharmacyItems = () => {
             };
 
             const response = await axios.post(
-                `${API_URL}/api/orders`,
+                `${API_URL}/api/orders/pharmacy`,
                 orderData,
                 {
                     headers: {

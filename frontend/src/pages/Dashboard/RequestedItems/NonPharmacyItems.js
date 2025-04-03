@@ -149,7 +149,7 @@ const NonPharmacyItems = () => {
             };
 
             const response = await axios.post(
-                `${API_URL}/api/orders`,
+                `${API_URL}/api/orders/nonPharmacy`,
                 orderData,
                 {
                     headers: {
