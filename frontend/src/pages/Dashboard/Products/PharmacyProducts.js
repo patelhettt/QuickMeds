@@ -423,6 +423,8 @@ const NonPharmacyProducts = () => {
                                     name='tradeName'
                                     required
                                     defaultValue={editingProduct.tradeName}
+                                    value={editingProduct.tradeName}
+                                    onChange={(e) => setEditingProduct({...editingProduct, tradeName: e.target.value})}
                                 />
                                 <Input
                                     title={'Generic Name'}
@@ -430,13 +432,17 @@ const NonPharmacyProducts = () => {
                                     name='genericName'
                                     required
                                     defaultValue={editingProduct.genericName}
+                                    value={editingProduct.genericName}
+                                    onChange={(e) => setEditingProduct({...editingProduct, genericName: e.target.value})}
                                 />
                                 <Input
                                     title={'Strength'}
-                                    type='number'
+                                    type='text'
                                     name='strength'
                                     required
                                     defaultValue={editingProduct.strength}
+                                    value={editingProduct.strength}
+                                    onChange={(e) => setEditingProduct({...editingProduct, strength: e.target.value})}
                                 />
                                 <Select
                                     title={'Category'}
@@ -444,6 +450,8 @@ const NonPharmacyProducts = () => {
                                     isRequired='required'
                                     options={categories.map(c => c.Name)}
                                     defaultValue={editingProduct.category}
+                                    value={editingProduct.category}
+                                    onChange={(e) => setEditingProduct({...editingProduct, category: e.target.value})}
                                 />
                                 <Select
                                     title={'Company'}
@@ -451,6 +459,8 @@ const NonPharmacyProducts = () => {
                                     isRequired='required'
                                     options={companies.map(c => c.Name)}
                                     defaultValue={editingProduct.company}
+                                    value={editingProduct.company}
+                                    onChange={(e) => setEditingProduct({...editingProduct, company: e.target.value})}
                                 />
                                 <Select
                                     title={'Unit Type'}
@@ -458,6 +468,25 @@ const NonPharmacyProducts = () => {
                                     isRequired='required'
                                     options={unitTypes.map(u => u.Name)}
                                     defaultValue={editingProduct.unitType}
+                                    value={editingProduct.unitType}
+                                    onChange={(e) => setEditingProduct({...editingProduct, unitType: e.target.value})}
+                                />
+                                <Input
+                                    title={'Stock'}
+                                    type='number'
+                                    name='stock'
+                                    required
+                                    defaultValue={editingProduct.stock}
+                                    value={editingProduct.stock}
+                                    onChange={(e) => setEditingProduct({...editingProduct, stock: e.target.value})}
+                                />
+                                <Input
+                                    title={'Unit MRP'}
+                                    type='number'
+                                    name='unitMrp'
+                                    defaultValue={editingProduct.unitMrp}
+                                    value={editingProduct.unitMrp}
+                                    onChange={(e) => setEditingProduct({...editingProduct, unitMrp: e.target.value})}
                                 />
                             </div>
                             <div className="flex gap-2 mt-4">

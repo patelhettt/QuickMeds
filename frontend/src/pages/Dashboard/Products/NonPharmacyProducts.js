@@ -204,10 +204,6 @@ const NonPharmacyProducts = () => {
         fetchDropdownData();
     }, []);
 
-    
-
-   
-
     return (
         <section className='p-4 mt-16'>
             <DashboardPageHeading
@@ -251,10 +247,12 @@ const NonPharmacyProducts = () => {
                         <form onSubmit={updateNonPharmacyProduct}>
                             <div className='grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2 mb-2'>
                                 <Input 
-                                    title={'Trade Name'} 
+                                    title={'Product Name'} 
                                     type='text' 
                                     name='tradeName' 
                                     defaultValue={currentProduct.tradeName} 
+                                    value={currentProduct.tradeName}
+                                    onChange={(e) => setCurrentProduct({...currentProduct, tradeName: e.target.value})}
                                     required 
                                 />
                                 <Select 
@@ -263,6 +261,16 @@ const NonPharmacyProducts = () => {
                                     isRequired='required' 
                                     options={categories.map(c => c.Name)} 
                                     defaultValue={currentProduct.category}
+                                    value={currentProduct.category}
+                                    onChange={(e) => setCurrentProduct({...currentProduct, category: e.target.value})}
+                                />
+                                <Input 
+                                    title={'Strength'} 
+                                    type='text' 
+                                    name='strength' 
+                                    defaultValue={currentProduct.strength || 'N/A'}
+                                    value={currentProduct.strength || 'N/A'}
+                                    onChange={(e) => setCurrentProduct({...currentProduct, strength: e.target.value})}
                                 />
                                 <Select 
                                     title={'Company'} 
@@ -270,25 +278,42 @@ const NonPharmacyProducts = () => {
                                     isRequired='required' 
                                     options={companies.map(c => c.Name)} 
                                     defaultValue={currentProduct.company}
-                                />
-                                <Select 
-                                    title={'Unit Type'} 
-                                    name='unitType' 
-                                    isRequired='required' 
-                                    options={unitTypes.map(u => u.Name)} 
-                                    defaultValue={currentProduct.unitType}
+                                    value={currentProduct.company}
+                                    onChange={(e) => setCurrentProduct({...currentProduct, company: e.target.value})}
                                 />
                                 <Input 
                                     title={'Stock'} 
                                     type='number' 
                                     name='stock' 
-                                    defaultValue={currentProduct.stock || 0} 
+                                    defaultValue={currentProduct.stock || 0}
+                                    value={currentProduct.stock || 0}
+                                    onChange={(e) => setCurrentProduct({...currentProduct, stock: e.target.value})}
+                                    required
                                 />
                                 <Input 
-                                    title={'Price'} 
+                                    title={'Pack Type'} 
+                                    type='text' 
+                                    name='packType' 
+                                    defaultValue={currentProduct.packType || 'Various'}
+                                    value={currentProduct.packType || 'Various'}
+                                    onChange={(e) => setCurrentProduct({...currentProduct, packType: e.target.value})}
+                                />
+                                <Input 
+                                    title={'Pack MRP'} 
                                     type='number' 
                                     name='price' 
-                                    defaultValue={currentProduct.price || 0} 
+                                    defaultValue={currentProduct.price || 0}
+                                    value={currentProduct.price || 0}
+                                    onChange={(e) => setCurrentProduct({...currentProduct, price: e.target.value})}
+                                    required
+                                />
+                                <Input 
+                                    title={'Code'} 
+                                    type='text' 
+                                    name='code' 
+                                    defaultValue={currentProduct.code}
+                                    value={currentProduct.code}
+                                    disabled
                                 />
                             </div>
                             <div className="flex gap-2 mt-4">

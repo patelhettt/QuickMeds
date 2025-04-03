@@ -2,6 +2,20 @@ const express = require('express');
 const router = express.Router();
 const { User, Pharmacy } = require('../models/Pharmacy');
 
+// Get total count of pharmacy products
+router.get('/count', async (req, res) => {
+    try {
+        const totalProducts = await Pharmacy.countDocuments();
+        res.status(200).json({ totalProducts });
+    } catch (error) {
+        console.error('Error fetching pharmacy product count:', error);
+        res.status(500).json({ 
+            error: 'Failed to fetch product count',
+            details: error.message 
+        });
+    }
+});
+
 // Get paginated pharmacy products with search and filters
 router.get('/', async (req, res) => {
     try {
@@ -97,7 +111,7 @@ router.get('/unitTypes', async (req, res) => {
     }
 });
 
-// Get a pharmacy product by ID
+// Get a pharmacy product by ID - THIS SHOULD COME AFTER ALL OTHER SPECIFIC ROUTES
 router.get('/:id', async (req, res) => {
     try {
         const product = await Pharmacy.findById(req.params.id);

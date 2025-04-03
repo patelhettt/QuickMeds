@@ -9,21 +9,21 @@ const Pricing = () => {
         {
             "id": 1,
             "planName": "Basic",
-            "price": "$199/mo",
+            "price": "₹199/mo",
             "features": ['Centralized medicine inventory', 'Order management system', 'Basic revenue tracking', 'Single warehouse support', 'Standard reporting', 'Email support'],
             "description": "Perfect for small pharmacies and medical stores. Manage your inventory, process orders, and track basic revenue metrics with our starter plan."
         },
         {
             "id": 2,
             "planName": "Professional",
-            "price": "$349/mo",
+            "price": "₹349/mo",
             "features": ['Advanced inventory management', 'Multi-store order processing', 'Comprehensive revenue analytics', 'Up to 5 sub-admin accounts', 'Expiry date tracking', 'Priority customer support'],
             "description": "Designed for growing pharmacy chains. Coordinate between warehouse and multiple local stores with advanced tracking and management features."
         },
         {
             "id": 3,
             "planName": "Enterprise",
-            "price": "$599/mo",
+            "price": "₹599/mo",
             "features": ['Unlimited medicine inventory', 'Unlimited sub-admin accounts', 'Real-time sales & revenue dashboard', 'Advanced security features', 'Custom reporting', 'Dedicated account manager'],
             "description": "The complete solution for large pharmaceutical distributors. Manage unlimited inventory across multiple warehouses and local stores with premium support."
         },
@@ -60,7 +60,7 @@ const Pricing = () => {
                                                 </p>)
                                         }
 
-                                        <button className="flex items-center justify-between text-white bg-secondary border-0 py-2 px-4 w-full focus:outline-none hover:bg-primary rounded my-4">Get Started
+                                        <button className="flex items-center justify-between text-white bg-secondary border-0 py-2 px-4 w-full focus:outline-none hover:bg-primary rounded my-4">Coming Soon
                                             <FaLongArrowAltRight />
                                         </button>
 

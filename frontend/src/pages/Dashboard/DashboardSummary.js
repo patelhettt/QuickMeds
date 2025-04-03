@@ -27,13 +27,13 @@ const DashboardSummary = () => {
 
   const fetchData = () => {
     Promise.all([
-      fetch("http://localhost:5000/api/products/pharmacy")
+      fetch("http://localhost:5000/api/products/pharmacy/count")
         .then((res) => res.json())
-        .then((data) => setPharmacyProducts(data.length)),
+        .then((data) => setPharmacyProducts(data.totalProducts || 0)),
         
-      fetch("http://localhost:5000/api/products/nonPharmacy")
+      fetch("http://localhost:5000/api/products/nonPharmacy/count")
         .then((res) => res.json())
-        .then((data) => setNonPharmacyProducts(data.length)),
+        .then((data) => setNonPharmacyProducts(data.totalProducts || 0)),
 
       fetch("http://localhost:5000/api/requestedItems/pharmacy")
         .then((res) => res.json())
