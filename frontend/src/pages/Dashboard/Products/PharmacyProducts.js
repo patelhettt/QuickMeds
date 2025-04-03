@@ -16,6 +16,7 @@ import { toast } from 'react-toastify';
 import DashboardPageHeading from '../../../components/headings/DashboardPageHeading';
 import AddModal from '../../../components/modals/AddModal';
 import axios from 'axios';
+import SearchButton from '../../../components/buttons/SearchButton';
 
 const API_BASE_URL = 'http://localhost:5000/api/products/pharmacy';
 
@@ -29,7 +30,8 @@ const NonPharmacyProducts = () => {
     const [totalProducts, setTotalProducts] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
     const [isModalOpen, setIsModalOpen] = useState(false);
-
+    const [searchTerm, setSearchTerm] = useState('');
+    const [isSearching, setIsSearching] = useState(false);
 
     // Add these state variables at the top with other state declarations
     const [isEditing, setIsEditing] = useState(false);
@@ -79,8 +81,6 @@ const NonPharmacyProducts = () => {
             toast.error(error.response?.data?.message || "Failed to update product");
         }
     };
-
-
 
     // Function to handle opening the modal
     const handleOpenModal = () => {
@@ -182,9 +182,10 @@ const NonPharmacyProducts = () => {
             return;
         }
     
-        // Add metadata
+        // Add metadata and default values
         productDetails.addedBy = 'admin';
         productDetails.addedToDbAt = new Date().toISOString();
+        productDetails.stock = productDetails.stock || 0; // Add default stock value
     
         try {
             const response = await axios.post(
@@ -205,11 +206,34 @@ const NonPharmacyProducts = () => {
             fetchProducts(currentPage, productsPerPage);
         } catch (error) {
             console.error('Error adding product:', error);
-            toast.error(error.response?.data?.message || 'Failed to add product');
+            toast.error(error.response?.data?.error || 'Failed to add product');
         }
     
         // Reset the form
         event.target.reset();
+    };
+
+    // Add this function to handle search modal toggle
+    const handleSearchToggle = () => {
+        setIsSearching(!isSearching);
+    };
+
+    // Add this function to handle search
+    const handleSearch = async (event) => {
+        event.preventDefault();
+        try {
+            const response = await axios.get(`${API_BASE_URL}?search=${searchTerm}&page=1&limit=${productsPerPage}`);
+            const data = response.data;
+            setPharmacyProducts(data.data);
+            setTotalProducts(data.totalItems);
+            setTotalPages(data.totalPages);
+            setCurrentPage(1);
+            setIsSearching(false);
+            toast.success(`Found ${data.totalItems} products matching "${searchTerm}"`);
+        } catch (error) {
+            console.error('Error searching products:', error);
+            toast.error(error.response?.data?.message || 'Failed to search products');
+        }
     };
 
     return (
@@ -219,10 +243,41 @@ const NonPharmacyProducts = () => {
                 value={totalProducts}
                 buttons={[
                     <NewButton key="new-button" modalId='create-new-product' onClick={handleOpenModal} />,
+                    <SearchButton key="search-button" onClick={handleSearchToggle} />,
                     <RefreshButton key="refresh-button" onClick={handleRefresh} />,
                     <PrintButton key="print-button" />
                 ]}
             />
+
+            {/* Search overlay/modal */}
+            {isSearching && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 z-40 flex items-center justify-center">
+                    <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+                        <h3 className="text-lg font-bold mb-4">Search Products</h3>
+                        <form onSubmit={handleSearch}>
+                            <div className="mb-4">
+                                <input
+                                    type="text"
+                                    placeholder="Enter product name, category, or company..."
+                                    className="input input-bordered w-full"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                            </div>
+                            <div className="flex justify-end gap-2">
+                                <button type="submit" className="btn btn-primary">Search</button>
+                                <button 
+                                    type="button" 
+                                    className="btn btn-outline"
+                                    onClick={handleSearchToggle}
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
 
             <input type="checkbox" id="create-new-product" className="modal-toggle" />
             <label htmlFor="create-new-product" className="modal cursor-pointer">

@@ -30,6 +30,9 @@ const Employees = () => {
     const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
     const token = localStorage.getItem('token');
 
+
+    const [userRole, setUserRole] = useState('employee');
+
     // Convert addEmployee to use axios
     const addEmployee = async (event) => {
         event.preventDefault();
@@ -88,8 +91,21 @@ const Employees = () => {
     };
 
     const [employees, setEmployees] = useState([]);
+    const [userCity, setUserCity] = useState('');
+    const [userStore, setUserStore] = useState('');
 
     useEffect(() => {
+        const userString = localStorage.getItem('user');
+        if (userString) {
+            try {
+                const user = JSON.parse(userString);
+                setUserRole(user.role || 'employee');
+                setUserCity(user.city || '');
+                setUserStore(user.store_name || '');
+            } catch (error) {
+                console.error('Error parsing user data:', error);
+            }
+        }
         fetchEmployees();
     }, []);
 
@@ -119,25 +135,27 @@ const Employees = () => {
                 return;
             }
 
+            // Get values directly from the form instead of using the state
+            const formData = new FormData(event.target);
             const updatedData = {
-                firstName: editingEmployee.firstName?.trim(),
-                lastName: editingEmployee.lastName?.trim(),
-                email: editingEmployee.email?.trim(),
-                phone: editingEmployee.phone?.trim(),
-                city: editingEmployee.city?.trim(),
-                store_name: editingEmployee.store_name?.trim(),
-                role: editingEmployee.role
+                firstName: formData.get('firstName')?.trim(),
+                lastName: formData.get('lastName')?.trim(),
+                email: formData.get('email')?.trim(),
+                phone: formData.get('phone')?.trim(),
+                city: formData.get('city')?.trim(),
+                store_name: formData.get('store_name')?.trim(),
+                role: formData.get('role')
             };
 
             // Validate all required fields
-            if (!updatedData.firstName || !updatedData.lastName || !updatedData.email || 
+            if (!updatedData.firstName || !updatedData.lastName || !updatedData.email ||
                 !updatedData.phone || !updatedData.city || !updatedData.store_name || !updatedData.role) {
                 toast.error("All fields are required");
                 return;
             }
 
             const response = await axios.put(
-                `${API_URL}/api/products/employees/${editingEmployee._id}`,
+                `${API_URL}/api/update/employees/${editingEmployee._id}`,
                 updatedData,
                 {
                     headers: {
@@ -176,7 +194,7 @@ const Employees = () => {
                 <DashboardPageHeading
                     className='fixed top-0 left-0 right-0'
                     name='Employees'
-                    value={employees.length}
+                    value={userRole === 'admin' ? `My City: ${userCity} | My Store: ${userStore}` : employees.length}
                     buttons={[
                         <NewButton key="new" modalId='create-new-product' />,
                         <RefreshButton key="refresh" onClick={fetchEmployees} />,
@@ -220,28 +238,36 @@ const Employees = () => {
             <table className="table table-zebra table-compact w-full">
                 <thead>{tableHead}</thead>
                 <tbody>
-                    {employees.map((employee, index) => (
-                        <TableRow
-                            key={employee._id}
-                            tableRowsData={[
-                                index + 1,
-                                employee.firstName,
-                                employee.lastName,
-                                employee.email,
-                                employee.phone || 'N/A',
-                                employee.city || 'N/A',
-                                employee.store_name || 'N/A',
-                                employee.role,
-                                <span className='flex items-center gap-x-1'>
-                                    <EditButton onClick={() => handleEdit(employee)} />
-                                    <DeleteButton
-                                        deleteApiLink={`${API_URL}/api/products/employees/${employee._id}`}
-                                        name={`${employee.firstName} ${employee.lastName}`}
-                                    />
-                                </span>,
-                            ]}
-                        />
-                    ))}
+                    {employees
+                        .filter(employee =>
+                            userRole === 'admin'  // Only apply filter for admins
+                                ? employee.city === userCity && employee.store_name === userStore 
+                                : true  // Show all for superadmin and other roles
+                        )
+                        .map((employee, index) => (
+                            <TableRow
+                                key={employee._id}
+                                tableRowsData={[
+                                    index + 1,
+                                    employee.firstName,
+                                    employee.lastName,
+                                    employee.email,
+                                    employee.phone || 'N/A',
+                                    employee.city || 'N/A',
+                                    employee.store_name || 'N/A',
+                                    employee.role,
+                                    <span className='flex items-center gap-x-1'>
+                                        {(userRole === 'superadmin' || (userRole === 'admin' && employee.role !== 'admin')) && (
+                                            <EditButton onClick={() => handleEdit(employee)} />
+                                        )}
+                                        <DeleteButton
+                                            deleteApiLink={`${API_URL}/api/products/employees/${employee._id}`}
+                                            name={`${employee.firstName} ${employee.lastName}`}
+                                        />
+                                    </span>,
+                                ]}
+                            />
+                        ))}
                 </tbody>
             </table>
 
@@ -309,14 +335,13 @@ const Employees = () => {
                                     <select
                                         name="role"
                                         className="select select-bordered w-full"
-                                        value={editingEmployee.role || ''}
+                                        value={editingEmployee?.role || ''}
                                         onChange={(e) => setEditingEmployee({ ...editingEmployee, role: e.target.value })}
-                                        required
                                     >
-                                        <option value="">Select Role</option>
                                         <option value="admin">Admin</option>
                                         <option value="employee">Employee</option>
                                     </select>
+
                                 </div>
                             </div>
                             <div className="flex flex-col w-full lg:flex-row mt-4 place-content-center">
