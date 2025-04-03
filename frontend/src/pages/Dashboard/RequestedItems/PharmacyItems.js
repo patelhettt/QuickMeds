@@ -12,7 +12,7 @@ import TableRow from '../../../components/TableRow';
 import { toast } from 'react-toastify';
 import DashboardPageHeading from '../../../components/headings/DashboardPageHeading';
 import axios from 'axios';
-import { FiShoppingCart, FiPlus, FiMinus, FiTrash2 } from 'react-icons/fi';
+import { FiShoppingCart, FiPlus, FiMinus, FiTrash2, FiClock } from 'react-icons/fi';
 
 const PharmacyItems = () => {
     // State for items and pagination
@@ -22,25 +22,30 @@ const PharmacyItems = () => {
     const [totalItems, setTotalItems] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
     const [isLoading, setIsLoading] = useState(false);
-    
+
     // State for search
     const [searchTerm, setSearchTerm] = useState('');
     const [isSearching, setIsSearching] = useState(false);
-    
+
     // State for order creation
     const [selectedItems, setSelectedItems] = useState([]);
     const [isCreatingOrder, setIsCreatingOrder] = useState(false);
     const [orderNote, setOrderNote] = useState('');
-    
+
     // State for item request
     const [requestingItem, setRequestingItem] = useState(null);
     const [requestQuantity, setRequestQuantity] = useState(1);
-    
+
+    // New state for request history
+    const [showRequestHistory, setShowRequestHistory] = useState(false);
+    const [requestHistory, setRequestHistory] = useState([]);
+    const [loadingHistory, setLoadingHistory] = useState(false);
+
     // API and auth
     const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
     const token = localStorage.getItem('token');
     const user = JSON.parse(localStorage.getItem('user') || '{"_id":"user123","store_name":"Main Store"}');
-
+    console.log(user);
     // Table headers
     const tableHeadItems = ['SN', 'Product Name', 'Category', 'Strength', 'Company', 'Stock', 'Actions'];
 
@@ -54,12 +59,12 @@ const PharmacyItems = () => {
                     headers: { 'Authorization': `Bearer ${token}` }
                 }
             );
-            
+
             const data = response.data;
             setPharmacyItems(data.data || []);
             setTotalItems(data.totalItems || 0);
             setTotalPages(data.totalPages || 0);
-            
+
             if (search && data.totalItems === 0) {
                 toast.info(`No products found matching "${search}"`);
             }
@@ -99,7 +104,7 @@ const PharmacyItems = () => {
     // Add item to order
     const addToOrder = (item, quantity) => {
         const existingItemIndex = selectedItems.findIndex(i => i.itemId === item._id);
-        
+
         if (existingItemIndex >= 0) {
             const updatedItems = [...selectedItems];
             updatedItems[existingItemIndex].quantity = quantity;
@@ -117,7 +122,7 @@ const PharmacyItems = () => {
                 }
             ]);
         }
-        
+
         document.getElementById('request-item-modal').checked = false;
         toast.success(`Added ${item.tradeName} to order`);
     };
@@ -127,7 +132,26 @@ const PharmacyItems = () => {
         setSelectedItems(selectedItems.filter(item => item.itemId !== itemId));
     };
 
-    // Submit the complete order
+    // Fetch request history
+    const fetchRequestHistory = async () => {
+        setLoadingHistory(true);
+        try {
+            const response = await axios.get(
+                `${API_URL}/api/requestedItems/pharmacy/user/${user._id}`,
+                {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }
+            );
+            setRequestHistory(response.data);
+        } catch (error) {
+            console.error('Error fetching request history:', error);
+            toast.error('Failed to load request history');
+        } finally {
+            setLoadingHistory(false);
+        }
+    };
+
+    // Modified submitOrder function
     const submitOrder = async () => {
         try {
             if (selectedItems.length === 0) {
@@ -135,17 +159,27 @@ const PharmacyItems = () => {
                 return;
             }
 
+            // Format the items array according to the backend RequestItems model
+            const formattedItems = selectedItems.map(item => ({
+                itemId: item.itemId,
+                quantity: item.quantity,
+                name: item.name,
+                category: item.category,
+                strength: item.strength
+            }));
+
             const orderData = {
-                items: selectedItems,
-                requestedBy: user._id,
+                items: formattedItems,
+                userId: user._id,
                 storeName: user.store_name,
-                status: 'pending',
-                note: orderNote,
-                requestedAt: new Date()
+                note: orderNote || ''  // Ensure note is never undefined
             };
 
+            console.log('Submitting order with data:', orderData);
+            setIsLoading(true); // Add loading state while submitting
+
             const response = await axios.post(
-                `${API_URL}/api/orders`,
+                `${API_URL}/api/requestedItems/pharmacy/create-request`,
                 orderData,
                 {
                     headers: {
@@ -154,37 +188,166 @@ const PharmacyItems = () => {
                     }
                 }
             );
+            console.log('Response:', response);
 
             if (response.data) {
                 toast.success('Order submitted successfully');
+
+                // Clear the cart
                 setSelectedItems([]);
                 setOrderNote('');
                 setIsCreatingOrder(false);
+
+                // Refresh request history if it's being displayed
+                if (showRequestHistory) {
+                    await fetchRequestHistory();
+                }
+
+                // Optionally refresh the products list to update stock
+                await fetchItems(currentPage);
             }
         } catch (error) {
-            console.error('Order submission error:', error);
-            toast.error(error.response?.data?.message || 'Failed to submit order');
+            console.log('Full error object:', error);
+            console.log('Error response:', error.response);
+
+            // More detailed error messaging
+            const errorMessage = error.response?.data?.message ||
+                error.message ||
+                'Failed to submit order';
+            toast.error(errorMessage);
+        } finally {
+            setIsLoading(false); // Reset loading state
         }
     };
+
+    // Format date function
+    const formatDate = (dateString) => {
+        return new Date(dateString).toLocaleString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    };
+
+    // Get status badge color
+    const getStatusBadgeColor = (status) => {
+        switch (status.toLowerCase()) {
+            case 'pending':
+                return 'badge-warning';
+            case 'approved':
+                return 'badge-success';
+            case 'rejected':
+                return 'badge-error';
+            default:
+                return 'badge-info';
+        }
+    };
+
+    // Add this to your existing buttons array in DashboardPageHeading
+    const headerButtons = [
+        <button
+            key="history-button"
+            className="btn btn-xs flex gap-x-2 bg-gray-500 hover:bg-gray-600 text-white"
+            onClick={() => {
+                setShowRequestHistory(true);
+                fetchRequestHistory();
+            }}
+        >
+            <FiClock className='text-md' />
+            History
+        </button>,
+        <button
+            key="cart-button"
+            className="btn btn-xs flex gap-x-2 bg-blue-500 hover:bg-blue-600 text-white"
+            onClick={() => setIsCreatingOrder(true)}
+        >
+            <FiShoppingCart className='text-md' />
+            <span className="badge badge-accent text-xs font-bold">{selectedItems.length}</span>
+        </button>,
+        <SearchButton key="search-button" onClick={handleSearchToggle} />,
+        <RefreshButton key="refresh-button" onClick={() => fetchItems(currentPage)} />,
+        <PrintButton key="print-button" />
+    ];
+
+    // Add this new modal component for Request History
+    const RequestHistoryModal = () => (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-40 flex items-center justify-center">
+            <div className="bg-white p-6 rounded-lg shadow-lg w-11/12 max-w-4xl max-h-[90vh] overflow-y-auto">
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-xl font-bold text-black flex items-center">
+                        <FiClock className="mr-2" /> Request History
+                    </h3>
+                    <button
+                        className="btn btn-sm btn-circle bg-gray-100 hover:bg-gray-200 border-gray-300 text-black"
+                        onClick={() => setShowRequestHistory(false)}
+                    >
+                        ✕
+                    </button>
+                </div>
+
+                {loadingHistory ? (
+                    <div className="flex justify-center items-center p-8">
+                        <div className="loading loading-spinner loading-lg text-primary"></div>
+                    </div>
+                ) : requestHistory.length > 0 ? (
+                    <div className="overflow-x-auto">
+                        <table className="table table-compact w-full">
+                            <thead className="bg-gray-50">
+                                <tr>
+                                    <th className="text-black">Date</th>
+                                    <th className="text-black">Product</th>
+                                    <th className="text-black">Quantity</th>
+                                    <th className="text-black">Status</th>
+                                    <th className="text-black">Note</th>
+                                </tr>
+                            </thead>
+                            <tbody className="text-black">
+                                {requestHistory.map((request) => (
+                                    <tr key={request._id} className="hover:bg-gray-50">
+                                        <td className="whitespace-nowrap">
+                                            {formatDate(request.requestedAt)}
+                                        </td>
+                                        <td>
+                                            <div>
+                                                <div className="font-medium">{request.product.tradeName}</div>
+                                                <div className="text-xs text-gray-600">{request.product.category}</div>
+                                            </div>
+                                        </td>
+                                        <td>{request.quantityRequested}</td>
+                                        <td>
+                                            <span className={`badge ${getStatusBadgeColor(request.status)}`}>
+                                                {request.status}
+                                            </span>
+                                        </td>
+                                        <td className="max-w-xs truncate">
+                                            {request.note || '-'}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                ) : (
+                    <div className="text-center py-8">
+                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
+                            <FiClock size={24} className="text-gray-500" />
+                        </div>
+                        <p className="text-xl font-medium text-black mb-2">No request history</p>
+                        <p className="text-gray-700">You haven't made any requests yet</p>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
 
     return (
         <section className='p-4 mt-16'>
             <DashboardPageHeading
                 name='Pharmacy Products'
                 value={totalItems}
-                buttons={[
-                    <button 
-                        key="cart-button"
-                        className="btn btn-xs flex gap-x-2 bg-blue-500 hover:bg-blue-600 text-white" 
-                        onClick={() => setIsCreatingOrder(true)}
-                    >
-                        <FiShoppingCart className='text-md' />
-                        <span className="badge badge-accent text-xs font-bold">{selectedItems.length}</span>
-                    </button>,
-                    <SearchButton key="search-button" onClick={handleSearchToggle} />,
-                    <RefreshButton key="refresh-button" onClick={() => fetchItems(currentPage)} />,
-                    <PrintButton key="print-button" />
-                ]}
+                buttons={headerButtons}
             />
 
             {/* Search Modal */}
@@ -205,8 +368,8 @@ const PharmacyItems = () => {
                             </div>
                             <div className="flex justify-end gap-2">
                                 <button type="submit" className="btn btn-primary">Search</button>
-                                <button 
-                                    type="button" 
+                                <button
+                                    type="button"
                                     className="btn btn-outline"
                                     onClick={handleSearchToggle}
                                 >
@@ -285,27 +448,27 @@ const PharmacyItems = () => {
                         {totalPages > 1 && (
                             <div className="flex justify-center my-4 px-4">
                                 <div className="btn-group shadow-sm">
-                                    <button 
-                                        className="btn btn-sm bg-white hover:bg-gray-100 text-black border-gray-300" 
+                                    <button
+                                        className="btn btn-sm bg-white hover:bg-gray-100 text-black border-gray-300"
                                         onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                                         disabled={currentPage === 1}
                                     >
                                         «
                                     </button>
-                                    
+
                                     {[...Array(totalPages)].map((_, i) => {
                                         const page = i + 1;
                                         // Show current page, first, last, and pages around current
                                         if (
-                                            page === 1 || 
-                                            page === totalPages || 
+                                            page === 1 ||
+                                            page === totalPages ||
                                             (page >= currentPage - 1 && page <= currentPage + 1)
                                         ) {
                                             return (
-                                                <button 
+                                                <button
                                                     key={page}
-                                                    className={`btn btn-sm ${currentPage === page 
-                                                        ? 'bg-primary text-white hover:bg-primary-focus' 
+                                                    className={`btn btn-sm ${currentPage === page
+                                                        ? 'bg-primary text-white hover:bg-primary-focus'
                                                         : 'bg-white hover:bg-gray-100 text-black border-gray-300'}`}
                                                     onClick={() => setCurrentPage(page)}
                                                 >
@@ -313,16 +476,16 @@ const PharmacyItems = () => {
                                                 </button>
                                             );
                                         } else if (
-                                            page === currentPage - 2 || 
+                                            page === currentPage - 2 ||
                                             page === currentPage + 2
                                         ) {
                                             return <button key={page} className="btn btn-sm bg-white text-black border-gray-300 hover:bg-gray-100">...</button>;
                                         }
                                         return null;
                                     })}
-                                    
-                                    <button 
-                                        className="btn btn-sm bg-white hover:bg-gray-100 text-black border-gray-300" 
+
+                                    <button
+                                        className="btn btn-sm bg-white hover:bg-gray-100 text-black border-gray-300"
                                         onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                                         disabled={currentPage === totalPages}
                                     >
@@ -374,7 +537,7 @@ const PharmacyItems = () => {
                                     <span className="label-text font-medium text-black">Quantity</span>
                                 </label>
                                 <div className="flex items-center justify-center">
-                                    <button 
+                                    <button
                                         type="button"
                                         className="btn btn-circle btn-sm bg-gray-100 hover:bg-gray-200 border-gray-300 text-black"
                                         onClick={() => setRequestQuantity(q => Math.max(1, q - 1))}
@@ -390,7 +553,7 @@ const PharmacyItems = () => {
                                         className="input input-bordered w-20 mx-3 text-center font-bold text-black"
                                         required
                                     />
-                                    <button 
+                                    <button
                                         type="button"
                                         className="btn btn-circle btn-sm bg-gray-100 hover:bg-gray-200 border-gray-300 text-black"
                                         onClick={() => setRequestQuantity(q => Math.min(requestingItem.stock, q + 1))}
@@ -430,14 +593,14 @@ const PharmacyItems = () => {
                             <h3 className="text-xl font-bold text-black flex items-center">
                                 <FiShoppingCart className="mr-2" /> Your Order
                             </h3>
-                            <button 
-                                className="btn btn-sm btn-circle bg-gray-100 hover:bg-gray-200 border-gray-300 text-black" 
+                            <button
+                                className="btn btn-sm btn-circle bg-gray-100 hover:bg-gray-200 border-gray-300 text-black"
                                 onClick={() => setIsCreatingOrder(false)}
                             >
                                 ✕
                             </button>
                         </div>
-                        
+
                         {selectedItems.length > 0 ? (
                             <>
                                 <div className="overflow-x-auto mb-6 rounded-lg border">
@@ -459,13 +622,13 @@ const PharmacyItems = () => {
                                                     <td>{item.strength}</td>
                                                     <td>
                                                         <div className="flex items-center">
-                                                            <button 
+                                                            <button
                                                                 type="button"
                                                                 className="btn btn-xs btn-circle bg-gray-100 hover:bg-gray-200 border-gray-300 text-black"
                                                                 onClick={() => {
-                                                                    const newItems = selectedItems.map(i => 
-                                                                        i.itemId === item.itemId 
-                                                                            ? {...i, quantity: Math.max(1, i.quantity - 1)} 
+                                                                    const newItems = selectedItems.map(i =>
+                                                                        i.itemId === item.itemId
+                                                                            ? { ...i, quantity: Math.max(1, i.quantity - 1) }
                                                                             : i
                                                                     );
                                                                     setSelectedItems(newItems);
@@ -473,28 +636,28 @@ const PharmacyItems = () => {
                                                             >
                                                                 <FiMinus size={12} />
                                                             </button>
-                                                            <input 
-                                                                type="number" 
-                                                                min="1" 
+                                                            <input
+                                                                type="number"
+                                                                min="1"
                                                                 max={item.available}
-                                                                value={item.quantity} 
+                                                                value={item.quantity}
                                                                 onChange={(e) => {
-                                                                    const newItems = selectedItems.map(i => 
-                                                                        i.itemId === item.itemId 
-                                                                            ? {...i, quantity: Number(e.target.value)} 
+                                                                    const newItems = selectedItems.map(i =>
+                                                                        i.itemId === item.itemId
+                                                                            ? { ...i, quantity: Number(e.target.value) }
                                                                             : i
                                                                     );
                                                                     setSelectedItems(newItems);
                                                                 }}
-                                                                className="input input-bordered input-xs w-16 mx-1 text-center text-black" 
+                                                                className="input input-bordered input-xs w-16 mx-1 text-center text-black"
                                                             />
-                                                            <button 
+                                                            <button
                                                                 type="button"
                                                                 className="btn btn-xs btn-circle bg-gray-100 hover:bg-gray-200 border-gray-300 text-black"
                                                                 onClick={() => {
-                                                                    const newItems = selectedItems.map(i => 
-                                                                        i.itemId === item.itemId 
-                                                                            ? {...i, quantity: Math.min(i.available, i.quantity + 1)} 
+                                                                    const newItems = selectedItems.map(i =>
+                                                                        i.itemId === item.itemId
+                                                                            ? { ...i, quantity: Math.min(i.available, i.quantity + 1) }
                                                                             : i
                                                                     );
                                                                     setSelectedItems(newItems);
@@ -505,7 +668,7 @@ const PharmacyItems = () => {
                                                         </div>
                                                     </td>
                                                     <td>
-                                                        <button 
+                                                        <button
                                                             className="btn btn-error btn-xs btn-circle"
                                                             onClick={() => removeFromOrder(item.itemId)}
                                                         >
@@ -517,31 +680,33 @@ const PharmacyItems = () => {
                                         </tbody>
                                     </table>
                                 </div>
-                                
+
                                 <div className="form-control mb-6">
                                     <label className="label">
                                         <span className="label-text font-medium text-black">Order Notes</span>
                                     </label>
-                                    <textarea 
+                                    <textarea
                                         className="textarea textarea-bordered h-24 focus:ring-2 focus:ring-primary text-black"
                                         placeholder="Add any notes about this order..."
                                         value={orderNote}
                                         onChange={(e) => setOrderNote(e.target.value)}
                                     ></textarea>
                                 </div>
-                                
+
                                 <div className="flex justify-end space-x-3">
-                                    <button 
+                                    <button
                                         className="btn btn-outline"
                                         onClick={() => setIsCreatingOrder(false)}
+                                        disabled={isLoading}
                                     >
                                         Cancel
                                     </button>
-                                    <button 
-                                        className="btn btn-primary"
+                                    <button
+                                        className={`btn btn-primary ${isLoading ? 'loading' : ''}`}
                                         onClick={submitOrder}
+                                        disabled={isLoading}
                                     >
-                                        Submit Order
+                                        {isLoading ? 'Submitting...' : 'Submit Order'}
                                     </button>
                                 </div>
                             </>
@@ -552,7 +717,7 @@ const PharmacyItems = () => {
                                 </div>
                                 <p className="text-xl font-medium text-black mb-2">Your order is empty</p>
                                 <p className="text-gray-700 mb-6">Add items to your order from the product list</p>
-                                <button 
+                                <button
                                     className="btn btn-primary"
                                     onClick={() => setIsCreatingOrder(false)}
                                 >
@@ -563,6 +728,9 @@ const PharmacyItems = () => {
                     </div>
                 </div>
             )}
+
+            {/* Add the Request History Modal */}
+            {showRequestHistory && <RequestHistoryModal />}
         </section>
     );
 };
