@@ -31,7 +31,7 @@ mongoose.connect(MONGODB_URI, {
 app.use('/api/products/auth', require('./routes/api/auth/auth'));
 app.use('/api/products/employees', require('./routes/api/employees/users'));
 app.use('/api/products/customers', require('./routes/api/customers/customers'));
-app.use('/api/auth', require('./routes/api/auth/auth'));
+app.use('/api/update', require('./routes/api/auth/auth'));
 
 // Products API Routes
 app.use('/api/products/pharmacy', require('./routes/api/products/pharmacy'));

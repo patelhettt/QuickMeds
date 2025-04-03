@@ -19,12 +19,16 @@ const Dashboard = () => {
     const [isLoading, setIsLoading] = useState(true);
     const navigate = useNavigate();
 
+    // Add this near the top with other state variables
+    const [userRole, setUserRole] = useState('');
+    
+    // Update the useEffect to get the user role
     useEffect(() => {
         // Check if user is authenticated
         const token = localStorage.getItem('token');
-        const user = localStorage.getItem('user');
+        const userString = localStorage.getItem('user');
         
-        if (!token || !user) {
+        if (!token || !userString) {
             setIsAuthenticated(false);
             toast.error('Please login to access the dashboard', {
                 position: "top-right",
@@ -33,6 +37,13 @@ const Dashboard = () => {
             navigate('/login', { state: { from: '/dashboard' } });
         } else {
             setIsAuthenticated(true);
+            try {
+                const user = JSON.parse(userString);
+                setUserRole(user.role || 'employee');
+            } catch (error) {
+                console.error('Error parsing user data:', error);
+                setUserRole('employee'); // Default to employee if parsing fails
+            }
         }
         
         setIsLoading(false);
@@ -86,6 +97,7 @@ const Dashboard = () => {
 
                         <LinkComponents to={''} icon={<MdSpaceDashboard className='text-lg' />} name={'Dashboard'} />
 
+                        {/* Products - visible to all roles */}
                         <DetailsComponent
                             icon={<RiProductHuntFill className='text-lg' />}
                             name={'Products'}
@@ -103,6 +115,7 @@ const Dashboard = () => {
                                 ]
                             } />
 
+                        {/* Requested Items - visible to all roles */}
                         <DetailsComponent
                             icon={<BiGitPullRequest className='text-lg' />}
                             name={'Requested Items'}
@@ -120,40 +133,47 @@ const Dashboard = () => {
                                 ]
                             } />
 
-                        <DetailsComponent
-                            icon={<RiShoppingCartFill className='text-lg' />}
-                            name={'Orders'}
-                            subMenus={
-                                [
-                                    <LinkComponents
-                                        to={'orders/pharmacy'}
-                                        icon={<MdLocalPharmacy className='text-lg' />}
-                                        name={'Pharmacy'} />,
+                        {/* Orders/Inventory - visible to admin and superadmin only */}
+                        {(userRole === 'admin' || userRole === 'superadmin') && (
+                            <DetailsComponent
+                                icon={<RiShoppingCartFill className='text-lg' />}
+                                name={'Inventory Stock'}
+                                subMenus={
+                                    [
+                                        <LinkComponents
+                                            to={'orders/pharmacy'}
+                                            icon={<MdLocalPharmacy className='text-lg' />}
+                                            name={'Pharmacy'} />,
 
-                                    <LinkComponents
-                                        to={'orders/non-pharmacy'}
-                                        icon={<RiProfileFill className='text-lg' />}
-                                        name={'Non Pharmacy'} />
-                                ]
-                            } />
+                                        <LinkComponents
+                                            to={'orders/non-pharmacy'}
+                                            icon={<RiProfileFill className='text-lg' />}
+                                            name={'Non Pharmacy'} />
+                                    ]
+                                } />
+                        )}
 
-                        <DetailsComponent
-                            icon={<AiFillCreditCard className='text-lg' />}
-                            name={'Purchases'}
-                            subMenus={
-                                [
-                                    <LinkComponents
-                                        to={'purchases/pharmacy'}
-                                        icon={<MdLocalPharmacy className='text-lg' />}
-                                        name={'Pharmacy'} />,
+                        {/* Purchases - visible to admin and superadmin only */}
+                        {(userRole === 'admin' || userRole === 'superadmin') && (
+                            <DetailsComponent
+                                icon={<AiFillCreditCard className='text-lg' />}
+                                name={'Purchases'}
+                                subMenus={
+                                    [
+                                        <LinkComponents
+                                            to={'purchases/pharmacy'}
+                                            icon={<MdLocalPharmacy className='text-lg' />}
+                                            name={'Pharmacy'} />,
 
-                                    <LinkComponents
-                                        to={'purchases/non-pharmacy'}
-                                        icon={<RiProfileFill className='text-lg' />}
-                                        name={'Non Pharmacy'} />
-                                ]
-                            } />
+                                        <LinkComponents
+                                            to={'purchases/non-pharmacy'}
+                                            icon={<RiProfileFill className='text-lg' />}
+                                            name={'Non Pharmacy'} />
+                                    ]
+                                } />
+                        )}
 
+                        {/* Returns - visible to all roles */}
                         <DetailsComponent
                             icon={<TbTruckReturn className='text-lg' />}
                             name={'Returns'}
@@ -171,54 +191,65 @@ const Dashboard = () => {
                                 ]
                             } />
 
-                        <DetailsComponent
-                            icon={<AiFillSetting className='text-lg' />}
-                            name={'Settings'}
-                            subMenus={
-                                [
-                                    <LinkComponents
-                                        to={'setup/categories'}
-                                        icon={<BiCategory className='text-lg' />}
-                                        name={'Categories'} />,
+                        {/* Settings - visible to admin and superadmin only */}
+                        {(userRole === 'admin' || userRole === 'superadmin') && (
+                            <DetailsComponent
+                                icon={<AiFillSetting className='text-lg' />}
+                                name={'Settings'}
+                                subMenus={
+                                    [
+                                        <LinkComponents
+                                            to={'setup/categories'}
+                                            icon={<BiCategory className='text-lg' />}
+                                            name={'Categories'} />,
 
-                                    <LinkComponents
-                                        to={'setup/unit-types'}
-                                        icon={<BiUnite className='text-lg' />}
-                                        name={'Unit Types'} />,
+                                        <LinkComponents
+                                            to={'setup/unit-types'}
+                                            icon={<BiUnite className='text-lg' />}
+                                            name={'Unit Types'} />,
 
-                                    <LinkComponents
-                                        to={'setup/companies'}
-                                        icon={<AiFillCopyrightCircle className='text-lg' />}
-                                        name={'Companies'} />
-                                ]
-                            } />
+                                        <LinkComponents
+                                            to={'setup/companies'}
+                                            icon={<AiFillCopyrightCircle className='text-lg' />}
+                                            name={'Companies'} />
+                                    ]
+                                } />
+                        )}
 
-                        <LinkComponents to={'employees'} icon={<RiAdminFill className='text-lg' />} name={'Employees'} />
+                        {/* Employees - visible to admin and superadmin only */}
+                        {(userRole === 'admin' || userRole === 'superadmin') && (
+                            <LinkComponents to={'employees'} icon={<RiAdminFill className='text-lg' />} name={'Employees'} />
+                        )}
 
+                        {/* Customers - visible to all roles */}
                         <LinkComponents to={'customers'} icon={<FaUsers className='text-lg' />} name={'Customers'} />
 
-                        <DetailsComponent
-                            icon={<TbTruckDelivery className='text-lg' />}
-                            name={'Suppliers'}
-                            subMenus={
-                                [
-                                    <LinkComponents
-                                        to={'suppliers/lists'}
-                                        icon={<FaThList className='text-md' />}
-                                        name={'Lists'} />,
+                        {/* Suppliers - visible to admin and superadmin only */}
+                        {(userRole === 'admin' || userRole === 'superadmin') && (
+                            <DetailsComponent
+                                icon={<TbTruckDelivery className='text-lg' />}
+                                name={'Suppliers'}
+                                subMenus={
+                                    [
+                                        <LinkComponents
+                                            to={'suppliers/lists'}
+                                            icon={<FaThList className='text-md' />}
+                                            name={'Lists'} />,
 
-                                    <LinkComponents
-                                        to={'suppliers/payments'}
-                                        icon={<BsCreditCard2BackFill className='text-lg' />}
-                                        name={'Payments'} />,
+                                        <LinkComponents
+                                            to={'suppliers/payments'}
+                                            icon={<BsCreditCard2BackFill className='text-lg' />}
+                                            name={'Payments'} />,
 
-                                    <LinkComponents
-                                        to={'suppliers/documents'}
-                                        icon={<HiDocumentText className='text-lg' />}
-                                        name={'Documents'} />
-                                ]
-                            } />
+                                        <LinkComponents
+                                            to={'suppliers/documents'}
+                                            icon={<HiDocumentText className='text-lg' />}
+                                            name={'Documents'} />
+                                    ]
+                                } />
+                        )}
 
+                        {/* POS - visible to all roles */}
                         <LinkComponents to={'POS'} icon={<FaThList className='text-lg' />} name={'POS'} />
                     </nav>
                     

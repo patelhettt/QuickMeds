@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const router = express.Router();
 const { ObjectId } = require('mongodb');
+const mongoose = require('mongoose');
 
 // Registration Route
 router.post('/register', async (req, res) => {
@@ -98,31 +99,38 @@ router.get('/user/:id', async (req, res) => {  // <- This line is correct
 // Update Employee Route
 router.put('/employees/:id', async (req, res) => {
     try {
-        const { firstName, lastName, email, phone, city, store_name, role } = req.body;
-        const employeeId = req.params.id;
+        const { id } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: 'Invalid Employee ID' });
+        }
 
-        // Find employee by ID
-        const employee = await User.findById(employeeId);
-        if (!employee) {
+        const { firstName, lastName, email, phone, city, store_name, role } = req.body;
+        console.log(req.body);
+        // Validate required fields if necessary
+        if (!firstName && !lastName && !email && !phone && !city && !store_name && !role) {
+            return res.status(400).json({ message: 'At least one field is required for update' });
+        }
+
+        // Check if the email is already taken
+        if (email) {
+            const emailExists = await User.findOne({ email, _id: { $ne: id } });
+            if (emailExists) {
+                return res.status(400).json({ message: 'Email is already in use' });
+            }
+        }
+
+        // Update Employee in one query
+        const updatedEmployee = await User.findByIdAndUpdate(
+            id,
+            { $set: { firstName, lastName, email, phone, city, store_name, role } },
+            { new: true, runValidators: true }
+        );
+
+        if (!updatedEmployee) {
             return res.status(404).json({ message: 'Employee not found' });
         }
 
-        // Update employee details
-        employee.firstName = firstName || employee.firstName;
-        employee.lastName = lastName || employee.lastName;
-        employee.email = email || employee.email;
-        employee.phone = phone || employee.phone;
-        employee.city = city || employee.city;
-        employee.store_name = store_name || employee.store_name;
-        employee.role = role || employee.role;
-
-        // Save updated employee
-        const updatedEmployee = await employee.save();
-
-        res.json({
-            message: 'Employee updated successfully',
-            employee: updatedEmployee
-        });
+        res.json({ message: 'Employee updated successfully', employee: updatedEmployee });
 
     } catch (error) {
         console.error('Update employee error:', error);
@@ -130,6 +138,5 @@ router.put('/employees/:id', async (req, res) => {
     }
 });
 
-
-
 module.exports = router;
+
