@@ -20,7 +20,7 @@ import PrintButton2 from '../../../components/buttons/PrintButton2';
 import MailButton from '../../../components/buttons/MailButton';
 
 const PharmacyOrders = () => {
-    const tableHeadItems = ['SN', 'Voucher', 'Supplier', 'Status', 'Quantity', 'TP', 'Vat', 'Discount', 'MRP', 'Creator', 'Created At', 'Actions'];
+    const tableHeadItems = ['SN', 'Order ID', 'Requested By', 'Status', 'Items Count', 'Requested At', 'Note', 'Actions'];
 
     const modalTableHeadItems1 = ['SN', 'Name', 'Strength', 'Company', 'Category', 'Pack Type', 'TP'];
 
@@ -80,6 +80,8 @@ const PharmacyOrders = () => {
     const [suppliers, setSuppliers] = useState([]);
     const [categories, setCategories] = useState([]);
     const [unitTypes, setUnitTypes] = useState([]);
+    const [userRole, setUserRole] = useState('superadmin'); // Changed from 'admin' to 'superadmin'
+    const [expandedOrderId, setExpandedOrderId] = useState(null);
 
     // get all pharmacy orders
     useEffect(() => {
@@ -108,6 +110,79 @@ const PharmacyOrders = () => {
             .then(res => res.json())
             .then(ut => setUnitTypes(ut));
     }, []);
+
+    // Handle order approval
+    const handleApproveOrder = (orderId) => {
+        fetch(`http://localhost:5000/api/orders/pharmacy/${orderId}/approve`, {
+            method: 'PATCH',
+            headers: {
+                'content-type': 'application/json'
+            }
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    toast.success('Order approved successfully');
+                    // Update the orders list
+                    setPharmacyOrders(pharmacyOrders.map(order => 
+                        order._id === orderId ? {...order, status: 'Approved'} : order
+                    ));
+                } else {
+                    toast.error('Failed to approve order');
+                }
+            })
+            .catch(err => {
+                toast.error('An error occurred');
+                console.error(err);
+            });
+    };
+
+    // Handle order rejection
+    const handleRejectOrder = (orderId) => {
+        fetch(`http://localhost:5000/api/orders/pharmacy/${orderId}/reject`, {
+            method: 'PATCH',
+            headers: {
+                'content-type': 'application/json'
+            }
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    toast.success('Order rejected');
+                    // Update the orders list
+                    setPharmacyOrders(pharmacyOrders.map(order => 
+                        order._id === orderId ? {...order, status: 'Rejected'} : order
+                    ));
+                } else {
+                    toast.error('Failed to reject order');
+                }
+            })
+            .catch(err => {
+                toast.error('An error occurred');
+                console.error(err);
+            });
+    };
+
+    // Toggle expanded row
+    const toggleExpandRow = (orderId) => {
+        if (expandedOrderId === orderId) {
+            setExpandedOrderId(null);
+        } else {
+            setExpandedOrderId(orderId);
+        }
+    };
+
+    // Format date function
+    const formatDate = (dateString) => {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    };
 
     return (
         <section className='p-4 mt-16'>
@@ -222,34 +297,107 @@ const PharmacyOrders = () => {
                 </thead>
                 <tbody>
                     {
-                        pharmacyOrders.map((pharmacyOrder, index) =>
-                            <TableRow
-                                key={pharmacyOrder._id}
-                                tableRowsData={
-                                    [
-                                        index + 1,
-                                        pharmacyOrder.voucher,
-                                        pharmacyOrder.supplier,
-                                        pharmacyOrder.status,
-                                        pharmacyOrder.quantity,
-                                        pharmacyOrder.status,
-                                        pharmacyOrder.vat,
-                                        pharmacyOrder.discount,
-                                        pharmacyOrder.mrp,
-                                        pharmacyOrder.creator,
-                                        pharmacyOrder?.createdAt?.slice(0, 10),
-                                        <span className='flex items-center gap-x-1'>
-                                            <EditButton />
-                                            <DeleteButton
-                                                deleteApiLink='http://localhost:5000/api/orders/pharmacy/'
-                                                itemId={pharmacyOrder._id}
-                                                name='Order' />
-                                            <PrintButton2 />
-                                            <MailButton />
-                                            <NewButton title='Purchase' icon='' />
+                        pharmacyOrders.map((order, index) => (
+                            <React.Fragment key={order._id}>
+                                <tr 
+                                    className={`cursor-pointer hover:bg-base-200 ${expandedOrderId === order._id ? 'bg-base-200' : ''}`}
+                                    onClick={() => toggleExpandRow(order._id)}
+                                >
+                                    <td>{index + 1}</td>
+                                    <td>{order._id.substring(0, 8) + '...'}</td>
+                                    <td>{order.requestedBy}</td>
+                                    <td>
+                                        <span className={`badge ${
+                                            order.status === 'pending' ? 'badge-warning' : 
+                                            order.status === 'approved' ? 'badge-success' : 
+                                            'badge-error'
+                                        }`}>
+                                            {order.status}
                                         </span>
-                                    ]
-                                } />)
+                                    </td>
+                                    <td>
+                                        <div className="tooltip" data-tip={order.items.map(item => item.name).join(', ')}>
+                                            <span>{order.items.length} items</span>
+                                        </div>
+                                    </td>
+                                    <td>{formatDate(order.requestedAt)}</td>
+                                    <td>{order.note ? (order.note.length > 20 ? order.note.substring(0, 20) + '...' : order.note) : '-'}</td>
+                                    <td>
+                                        <span className='flex items-center gap-x-1'>
+                                            {order.status === 'pending' && (
+                                                <>
+                                                    <button 
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleApproveOrder(order._id);
+                                                        }}
+                                                        className="btn btn-xs btn-success text-white">
+                                                        Approve
+                                                    </button>
+                                                    <button 
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleRejectOrder(order._id);
+                                                        }}
+                                                        className="btn btn-xs btn-error text-white">
+                                                        Reject
+                                                    </button>
+                                                </>
+                                            )}
+                                            <PrintButton2 />
+                                        </span>
+                                    </td>
+                                </tr>
+                                {expandedOrderId === order._id && (
+                                    <tr>
+                                        <td colSpan={8} className="bg-base-100 p-4">
+                                            <div className="p-2 border rounded-md">
+                                                <h4 className="font-semibold text-md mb-2">Order Items:</h4>
+                                                <table className="table table-zebra table-compact w-full">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>SN</th>
+                                                            <th>Item Name</th>
+                                                            <th>Category</th>
+                                                            <th>Strength</th>
+                                                            <th>Quantity</th>
+                                                            <th>Available</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {order.items.map((item, idx) => (
+                                                            <tr key={item.itemId}>
+                                                                <td>{idx + 1}</td>
+                                                                <td>{item.name}</td>
+                                                                <td>{item.category}</td>
+                                                                <td>{item.strength}</td>
+                                                                <td>{item.quantity}</td>
+                                                                <td>{item.available}</td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                                
+                                                {order.status === 'pending' && (
+                                                    <div className="mt-4 flex justify-end gap-2">
+                                                        <button 
+                                                            onClick={() => handleApproveOrder(order._id)}
+                                                            className="btn btn-sm btn-success text-white">
+                                                            Approve Order
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => handleRejectOrder(order._id)}
+                                                            className="btn btn-sm btn-error text-white">
+                                                            Reject Order
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )}
+                            </React.Fragment>
+                        ))
                     }
                 </tbody>
             </table>

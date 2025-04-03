@@ -36,6 +36,16 @@ const PharmacyItems = () => {
     const [requestingItem, setRequestingItem] = useState(null);
     const [requestQuantity, setRequestQuantity] = useState(1);
     
+    // Add state for orders
+    const [orders, setOrders] = useState([]);
+    const [viewingOrder, setViewingOrder] = useState(null);
+    const [orderStatus, setOrderStatus] = useState('');
+    const [adminNote, setAdminNote] = useState('');
+    const [isViewingOrders, setIsViewingOrders] = useState(false);
+    const [orderCurrentPage, setOrderCurrentPage] = useState(1);
+    const [orderTotalPages, setOrderTotalPages] = useState(0);
+    const [isLoadingOrders, setIsLoadingOrders] = useState(false);
+    
     // API and auth
     const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
     const token = localStorage.getItem('token');
@@ -68,6 +78,29 @@ const PharmacyItems = () => {
             toast.error('Failed to load products');
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    // Fetch orders with pagination
+    const fetchOrders = async (page = 1, limit = itemsPerPage) => {
+        setIsLoadingOrders(true);
+        try {
+            const response = await axios.get(
+                `${API_URL}/api/orders/pharmacy?page=${page}&limit=${limit}`,
+                {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }
+            );
+            
+            const data = response.data;
+            setOrders(data.data || []);
+            setOrderTotalPages(data.totalPages || 0);
+            
+        } catch (error) {
+            console.error('Error fetching orders:', error);
+            toast.error('Failed to load orders');
+        } finally {
+            setIsLoadingOrders(false);
         }
     };
 
@@ -167,24 +200,86 @@ const PharmacyItems = () => {
         }
     };
 
+    // View order details
+    const viewOrderDetails = (order) => {
+        setViewingOrder(order);
+        setOrderStatus(order.status);
+        setAdminNote(order.adminNote || '');
+        document.getElementById('view-order-modal').checked = true;
+    };
+
+    // Update order status
+    const updateOrderStatus = async () => {
+        try {
+            if (!viewingOrder) return;
+
+            const updateData = {
+                status: orderStatus,
+                adminNote: adminNote,
+                processedBy: user._id,
+                processedAt: new Date()
+            };
+
+            const response = await axios.put(
+                `${API_URL}/api/orders/pharmacy/${viewingOrder._id}`,
+                updateData,
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                }
+            );
+
+            if (response.data) {
+                toast.success(`Order ${orderStatus} successfully`);
+                document.getElementById('view-order-modal').checked = false;
+                fetchOrders(orderCurrentPage);
+            }
+        } catch (error) {
+            console.error('Order update error:', error);
+            toast.error(error.response?.data?.message || 'Failed to update order');
+        }
+    };
+
+    // Toggle between products and orders view
+    const toggleOrdersView = () => {
+        setIsViewingOrders(!isViewingOrders);
+        if (!isViewingOrders) {
+            fetchOrders(1);
+            setOrderCurrentPage(1);
+        }
+    };
+
     return (
         <section className='p-4 mt-16'>
             <DashboardPageHeading
-                name='Pharmacy Products'
-                value={totalItems}
+                name={isViewingOrders ? 'Pharmacy Orders' : 'Pharmacy Products'}
+                value={isViewingOrders ? orders.length : totalItems}
                 buttons={[
                     <button 
-                        key="cart-button"
+                        key="view-toggle"
                         className="btn btn-xs flex gap-x-2 bg-blue-500 hover:bg-blue-600 text-white" 
-                        onClick={() => setIsCreatingOrder(true)}
+                        onClick={toggleOrdersView}
                     >
-                        <FiShoppingCart className='text-md' />
-                        <span className="badge badge-accent text-xs font-bold">{selectedItems.length}</span>
+                        {isViewingOrders ? 'View Products' : 'View Orders'}
                     </button>,
-                    <SearchButton key="search-button" onClick={handleSearchToggle} />,
-                    <RefreshButton key="refresh-button" onClick={() => fetchItems(currentPage)} />,
+                    !isViewingOrders && (
+                        <button 
+                            key="cart-button"
+                            className="btn btn-xs flex gap-x-2 bg-blue-500 hover:bg-blue-600 text-white" 
+                            onClick={() => setIsCreatingOrder(true)}
+                        >
+                            <FiShoppingCart className='text-md' />
+                            <span className="badge badge-accent text-xs font-bold">{selectedItems.length}</span>
+                        </button>
+                    ),
+                    !isViewingOrders && <SearchButton key="search-button" onClick={handleSearchToggle} />,
+                    !isViewingOrders ? 
+                        <RefreshButton key="refresh-button" onClick={() => fetchItems(currentPage)} /> :
+                        <RefreshButton key="refresh-orders" onClick={() => fetchOrders(orderCurrentPage)} />,
                     <PrintButton key="print-button" />
-                ]}
+                ].filter(Boolean)}
             />
 
             {/* Search Modal */}
@@ -218,122 +313,247 @@ const PharmacyItems = () => {
                 </div>
             )}
 
-            {/* Products Table */}
-            <div className="overflow-x-auto mt-4 bg-white rounded-lg shadow-md">
-                {isLoading ? (
-                    <div className="flex justify-center items-center p-8">
-                        <div className="loading loading-spinner loading-lg text-primary"></div>
-                    </div>
-                ) : (
-                    <>
-                        <table className="table table-zebra table-compact w-full">
-                            <thead className="bg-gray-100">
-                                <tr>
-                                    {tableHeadItems.map((item, index) => (
-                                        <th key={index} className='text-xs md:text-sm font-bold text-black'>{item}</th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody className="text-black">
-                                {pharmacyItems.length > 0 ? (
-                                    pharmacyItems.map((product, index) => (
-                                        <tr key={product._id} className="hover:bg-gray-50 transition-colors">
-                                            <td className="font-medium">{(currentPage - 1) * itemsPerPage + index + 1}</td>
-                                            <td>
-                                                <div>
-                                                    <div className="font-bold text-black">{product.tradeName}</div>
-                                                    <div className="text-xs text-gray-700">{product.genericName}</div>
+            {isViewingOrders ? (
+                /* Orders Table */
+                <div className="overflow-x-auto mt-4 bg-white rounded-lg shadow-md">
+                    {isLoadingOrders ? (
+                        <div className="flex justify-center items-center p-8">
+                            <div className="loading loading-spinner loading-lg text-primary"></div>
+                        </div>
+                    ) : (
+                        <>
+                            <table className="table table-zebra table-compact w-full">
+                                <thead className="bg-gray-100">
+                                    <tr>
+                                        <th className='text-xs md:text-sm font-bold text-black'>Order ID</th>
+                                        <th className='text-xs md:text-sm font-bold text-black'>Requested By</th>
+                                        <th className='text-xs md:text-sm font-bold text-black'>Store</th>
+                                        <th className='text-xs md:text-sm font-bold text-black'>Items</th>
+                                        <th className='text-xs md:text-sm font-bold text-black'>Date</th>
+                                        <th className='text-xs md:text-sm font-bold text-black'>Status</th>
+                                        <th className='text-xs md:text-sm font-bold text-black'>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="text-black">
+                                    {orders.length > 0 ? (
+                                        orders.map((order) => (
+                                            <tr key={order._id} className="hover:bg-gray-50 transition-colors">
+                                                <td className="font-medium">{order._id.substring(0, 8)}</td>
+                                                <td>{order.requestedByName || 'Unknown'}</td>
+                                                <td>{order.storeName}</td>
+                                                <td>{order.items.length} items</td>
+                                                <td>{new Date(order.requestedAt).toLocaleDateString()}</td>
+                                                <td>
+                                                    <span className={`badge ${
+                                                        order.status === 'approved' ? 'badge-success' : 
+                                                        order.status === 'rejected' ? 'badge-error' : 
+                                                        'badge-warning'
+                                                    } text-xs font-semibold`}>
+                                                        {order.status}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <button
+                                                        className="btn btn-xs btn-primary flex items-center gap-1"
+                                                        onClick={() => viewOrderDetails(order)}
+                                                    >
+                                                        View
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan={7} className="text-center py-8 text-black">
+                                                <div className="flex flex-col items-center">
+                                                    <svg className="w-12 h-12 mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                    </svg>
+                                                    <p className="text-lg font-medium">No orders found</p>
                                                 </div>
                                             </td>
-                                            <td className="text-sm">{product.category}</td>
-                                            <td className="text-sm">{product.strength}</td>
-                                            <td className="text-sm">{product.company}</td>
-                                            <td>
-                                                <span className={`badge ${product.stock > 10 ? 'badge-success' : product.stock > 0 ? 'badge-warning' : 'badge-error'} text-xs font-semibold`}>
-                                                    {product.stock}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <button
-                                                    className={`btn btn-xs ${product.stock > 0 ? 'btn-primary' : 'btn-disabled'} flex items-center gap-1`}
-                                                    onClick={() => handleRequestItem(product)}
-                                                    disabled={product.stock <= 0}
-                                                >
-                                                    <FiPlus size={14} />
-                                                    Add
-                                                </button>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+
+                            {/* Orders Pagination */}
+                            {orderTotalPages > 1 && (
+                                <div className="flex justify-center my-4 px-4">
+                                    <div className="btn-group shadow-sm">
+                                        <button 
+                                            className="btn btn-sm bg-white hover:bg-gray-100 text-black border-gray-300" 
+                                            onClick={() => setOrderCurrentPage(p => Math.max(1, p - 1))}
+                                            disabled={orderCurrentPage === 1}
+                                        >
+                                            «
+                                        </button>
+                                        
+                                        {[...Array(orderTotalPages)].map((_, i) => {
+                                            const page = i + 1;
+                                            if (
+                                                page === 1 || 
+                                                page === orderTotalPages || 
+                                                (page >= orderCurrentPage - 1 && page <= orderCurrentPage + 1)
+                                            ) {
+                                                return (
+                                                    <button 
+                                                        key={page}
+                                                        className={`btn btn-sm ${orderCurrentPage === page 
+                                                            ? 'bg-primary text-white hover:bg-primary-focus' 
+                                                            : 'bg-white hover:bg-gray-100 text-black border-gray-300'}`}
+                                                        onClick={() => {
+                                                            setOrderCurrentPage(page);
+                                                            fetchOrders(page);
+                                                        }}
+                                                    >
+                                                        {page}
+                                                    </button>
+                                                );
+                                            } else if (
+                                                page === orderCurrentPage - 2 || 
+                                                page === orderCurrentPage + 2
+                                            ) {
+                                                return <button key={page} className="btn btn-sm bg-white text-black border-gray-300 hover:bg-gray-100">...</button>;
+                                            }
+                                            return null;
+                                        })}
+                                        
+                                        <button 
+                                            className="btn btn-sm bg-white hover:bg-gray-100 text-black border-gray-300" 
+                                            onClick={() => {
+                                                const nextPage = Math.min(orderTotalPages, orderCurrentPage + 1);
+                                                setOrderCurrentPage(nextPage);
+                                                fetchOrders(nextPage);
+                                            }}
+                                            disabled={orderCurrentPage === orderTotalPages}
+                                        >
+                                            »
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </>
+                    )}
+                </div>
+            ) : (
+                /* Products Table */
+                <div className="overflow-x-auto mt-4 bg-white rounded-lg shadow-md">
+                    {isLoading ? (
+                        <div className="flex justify-center items-center p-8">
+                            <div className="loading loading-spinner loading-lg text-primary"></div>
+                        </div>
+                    ) : (
+                        <>
+                            <table className="table table-zebra table-compact w-full">
+                                <thead className="bg-gray-100">
+                                    <tr>
+                                        {tableHeadItems.map((item, index) => (
+                                            <th key={index} className='text-xs md:text-sm font-bold text-black'>{item}</th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody className="text-black">
+                                    {pharmacyItems.length > 0 ? (
+                                        pharmacyItems.map((product, index) => (
+                                            <tr key={product._id} className="hover:bg-gray-50 transition-colors">
+                                                <td className="font-medium">{(currentPage - 1) * itemsPerPage + index + 1}</td>
+                                                <td>
+                                                    <div>
+                                                        <div className="font-bold text-black">{product.tradeName}</div>
+                                                        <div className="text-xs text-gray-700">{product.genericName}</div>
+                                                    </div>
+                                                </td>
+                                                <td className="text-sm">{product.category}</td>
+                                                <td className="text-sm">{product.strength}</td>
+                                                <td className="text-sm">{product.company}</td>
+                                                <td>
+                                                    <span className={`badge ${product.stock > 10 ? 'badge-success' : product.stock > 0 ? 'badge-warning' : 'badge-error'} text-xs font-semibold`}>
+                                                        {product.stock}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <button
+                                                        className={`btn btn-xs ${product.stock > 0 ? 'btn-primary' : 'btn-disabled'} flex items-center gap-1`}
+                                                        onClick={() => handleRequestItem(product)}
+                                                        disabled={product.stock <= 0}
+                                                    >
+                                                        <FiPlus size={14} />
+                                                        Add
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan={tableHeadItems.length} className="text-center py-8 text-black">
+                                                <div className="flex flex-col items-center">
+                                                    <svg className="w-12 h-12 mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                    </svg>
+                                                    <p className="text-lg font-medium">No products found</p>
+                                                    <p className="text-sm">Try adjusting your search or filters</p>
+                                                </div>
                                             </td>
                                         </tr>
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td colSpan={tableHeadItems.length} className="text-center py-8 text-black">
-                                            <div className="flex flex-col items-center">
-                                                <svg className="w-12 h-12 mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                                </svg>
-                                                <p className="text-lg font-medium">No products found</p>
-                                                <p className="text-sm">Try adjusting your search or filters</p>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
+                                    )}
+                                </tbody>
+                            </table>
 
-                        {/* Pagination */}
-                        {totalPages > 1 && (
-                            <div className="flex justify-center my-4 px-4">
-                                <div className="btn-group shadow-sm">
-                                    <button 
-                                        className="btn btn-sm bg-white hover:bg-gray-100 text-black border-gray-300" 
-                                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                        disabled={currentPage === 1}
-                                    >
-                                        «
-                                    </button>
-                                    
-                                    {[...Array(totalPages)].map((_, i) => {
-                                        const page = i + 1;
-                                        // Show current page, first, last, and pages around current
-                                        if (
-                                            page === 1 || 
-                                            page === totalPages || 
-                                            (page >= currentPage - 1 && page <= currentPage + 1)
-                                        ) {
-                                            return (
-                                                <button 
-                                                    key={page}
-                                                    className={`btn btn-sm ${currentPage === page 
-                                                        ? 'bg-primary text-white hover:bg-primary-focus' 
-                                                        : 'bg-white hover:bg-gray-100 text-black border-gray-300'}`}
-                                                    onClick={() => setCurrentPage(page)}
-                                                >
-                                                    {page}
-                                                </button>
-                                            );
-                                        } else if (
-                                            page === currentPage - 2 || 
-                                            page === currentPage + 2
-                                        ) {
-                                            return <button key={page} className="btn btn-sm bg-white text-black border-gray-300 hover:bg-gray-100">...</button>;
-                                        }
-                                        return null;
-                                    })}
-                                    
-                                    <button 
-                                        className="btn btn-sm bg-white hover:bg-gray-100 text-black border-gray-300" 
-                                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                        disabled={currentPage === totalPages}
-                                    >
-                                        »
-                                    </button>
+                            {/* Pagination */}
+                            {totalPages > 1 && (
+                                <div className="flex justify-center my-4 px-4">
+                                    <div className="btn-group shadow-sm">
+                                        <button 
+                                            className="btn btn-sm bg-white hover:bg-gray-100 text-black border-gray-300" 
+                                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                            disabled={currentPage === 1}
+                                        >
+                                            «
+                                        </button>
+                                        
+                                        {[...Array(totalPages)].map((_, i) => {
+                                            const page = i + 1;
+                                            // Show current page, first, last, and pages around current
+                                            if (
+                                                page === 1 || 
+                                                page === totalPages || 
+                                                (page >= currentPage - 1 && page <= currentPage + 1)
+                                            ) {
+                                                return (
+                                                    <button 
+                                                        key={page}
+                                                        className={`btn btn-sm ${currentPage === page 
+                                                            ? 'bg-primary text-white hover:bg-primary-focus' 
+                                                            : 'bg-white hover:bg-gray-100 text-black border-gray-300'}`}
+                                                        onClick={() => setCurrentPage(page)}
+                                                    >
+                                                        {page}
+                                                    </button>
+                                                );
+                                            } else if (
+                                                page === currentPage - 2 || 
+                                                page === currentPage + 2
+                                            ) {
+                                                return <button key={page} className="btn btn-sm bg-white text-black border-gray-300 hover:bg-gray-100">...</button>;
+                                            }
+                                            return null;
+                                        })}
+                                        
+                                        <button 
+                                            className="btn btn-sm bg-white hover:bg-gray-100 text-black border-gray-300" 
+                                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                            disabled={currentPage === totalPages}
+                                        >
+                                            »
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
-                        )}
-                    </>
-                )}
-            </div>
+                            )}
+                        </>
+                    )}
+                </div>
+            )}
 
             {/* Request Item Modal */}
             <input type="checkbox" id="request-item-modal" className="modal-toggle" />
@@ -563,6 +783,136 @@ const PharmacyItems = () => {
                     </div>
                 </div>
             )}
+
+            {/* View Order Modal */}
+            <input type="checkbox" id="view-order-modal" className="modal-toggle" />
+            <label htmlFor="view-order-modal" className="modal cursor-pointer">
+                <label className="modal-box relative max-w-4xl">
+                    <ModalCloseButton modalId={'view-order-modal'} />
+                    <ModalHeading modalHeading={'Order Details'} />
+                    {viewingOrder && (
+                        <div className='space-y-4'>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                <div className="bg-gray-50 p-3 rounded-lg">
+                                    <h4 className="font-bold text-sm text-gray-700 mb-2">Order Information</h4>
+                                    <div className="grid grid-cols-2 gap-2 text-sm">
+                                        <div>
+                                            <span className="text-gray-700">Order ID:</span>
+                                            <p className="font-medium text-black">{viewingOrder._id}</p>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-700">Status:</span>
+                                            <p className={`font-medium ${
+                                                viewingOrder.status === 'approved' ? 'text-green-600' : 
+                                                viewingOrder.status === 'rejected' ? 'text-red-600' : 
+                                                'text-amber-600'
+                                            }`}>
+                                                {viewingOrder.status.charAt(0).toUpperCase() + viewingOrder.status.slice(1)}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-700">Requested By:</span>
+                                            <p className="font-medium text-black">{viewingOrder.requestedByName || 'Unknown'}</p>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-700">Store:</span>
+                                            <p className="font-medium text-black">{viewingOrder.storeName}</p>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-700">Date Requested:</span>
+                                            <p className="font-medium text-black">{new Date(viewingOrder.requestedAt).toLocaleString()}</p>
+                                        </div>
+                                        {viewingOrder.processedAt && (
+                                            <div>
+                                                <span className="text-gray-700">Date Processed:</span>
+                                                <p className="font-medium text-black">{new Date(viewingOrder.processedAt).toLocaleString()}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                
+                                <div className="bg-gray-50 p-3 rounded-lg">
+                                    <h4 className="font-bold text-sm text-gray-700 mb-2">Notes</h4>
+                                    <div className="mb-3">
+                                        <span className="text-gray-700 text-sm">Requester Note:</span>
+                                        <p className="font-medium text-black bg-white p-2 rounded border min-h-[60px]">
+                                            {viewingOrder.note || 'No notes provided'}
+                                        </p>
+                                    </div>
+                                    {viewingOrder.status !== 'pending' && viewingOrder.adminNote && (
+                                        <div>
+                                            <span className="text-gray-700 text-sm">Admin Note:</span>
+                                            <p className="font-medium text-black bg-white p-2 rounded border min-h-[60px]">
+                                                {viewingOrder.adminNote}
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            
+                            <div className="overflow-x-auto mb-6 rounded-lg border">
+                                <table className="table table-compact w-full">
+                                    <thead className="bg-gray-50">
+                                        <tr>
+                                            <th className="text-black">Product</th>
+                                            <th className="text-black">Category</th>
+                                            <th className="text-black">Strength</th>
+                                            <th className="text-black">Quantity</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="text-black">
+                                        {viewingOrder.items.map((item, index) => (
+                                            <tr key={index} className="hover:bg-gray-50">
+                                                <td className="font-medium">{item.name}</td>
+                                                <td>{item.category}</td>
+                                                <td>{item.strength}</td>
+                                                <td>{item.quantity}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            {viewingOrder.status === 'pending' && (
+                                <>
+                                    <div className="form-control mb-4">
+                                        <label className="label">
+                                            <span className="label-text font-medium text-black">Admin Note</span>
+                                        </label>
+                                        <textarea 
+                                            className="textarea textarea-bordered h-24 focus:ring-2 focus:ring-primary text-black"
+                                            placeholder="Add any notes about this order approval/rejection..."
+                                            value={adminNote}
+                                            onChange={(e) => setAdminNote(e.target.value)}
+                                        ></textarea>
+                                    </div>
+                                    
+                                    <div className="flex justify-end space-x-3">
+                                        <button 
+                                            className="btn btn-error"
+                                            onClick={() => {
+                                                setOrderStatus('rejected');
+                                                updateOrderStatus();
+                                            }}
+                                        >
+                                            Reject Order
+                                        </button>
+                                        <button 
+                                            className="btn btn-success"
+                                            onClick={() => {
+                                                setOrderStatus('approved');
+                                                updateOrderStatus();
+                                            }}
+                                        >
+                                            Approve Order
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    )}
+                </label>
+            </label>
         </section>
     );
 };
