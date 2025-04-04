@@ -82,13 +82,114 @@ const PharmacyOrders = () => {
     const [unitTypes, setUnitTypes] = useState([]);
     const [userRole, setUserRole] = useState('superadmin'); // Changed from 'admin' to 'superadmin'
     const [expandedOrderId, setExpandedOrderId] = useState(null);
+    const [isLoading, setIsLoading] = useState(false);
 
-    // get all pharmacy orders
+    // Add this function to enrich orders with user details
+    const enrichOrdersWithUserDetails = async (orders) => {
+        // Create a map of user IDs to look up
+        const userIds = new Set();
+        orders.forEach(order => {
+            if (order.requestedBy && !order.email && !order.store_name) {
+                // If requestedBy looks like a MongoDB ID and we don't have email/store_name
+                if (order.requestedBy.match(/^[0-9a-fA-F]{24}$/)) {
+                    userIds.add(order.requestedBy);
+                }
+            }
+        });
+
+        if (userIds.size === 0) {
+            return orders; // No enrichment needed
+        }
+
+        // Fetch user details for these IDs
+        try {
+            const userDetailsPromises = Array.from(userIds).map(userId => 
+                fetch(`http://localhost:5000/api/products/auth/user/${userId}`)
+                    .then(res => res.ok ? res.json() : null)
+            );
+            
+            const userDetails = await Promise.all(userDetailsPromises);
+            
+            // Create a map of user details by ID
+            const userMap = {};
+            userDetails.forEach(user => {
+                if (user && user._id) {
+                    userMap[user._id] = user;
+                }
+            });
+            
+            // Enrich orders with user details
+            return orders.map(order => {
+                if (order.requestedBy && userMap[order.requestedBy]) {
+                    const user = userMap[order.requestedBy];
+                    return {
+                        ...order,
+                        email: user.email || order.email,
+                        store_name: user.store_name || order.store_name,
+                        // Keep the original requestedBy but add a display name
+                        requestedByName: `${user.firstName} ${user.lastName}`
+                    };
+                }
+                return order;
+            });
+        } catch (error) {
+            console.error("Error enriching orders with user details:", error);
+            return orders; // Return original orders on error
+        }
+    };
+
+    // Update the useEffect that fetches orders
     useEffect(() => {
+        // Get user data from localStorage to determine filtering
+        const userData = localStorage.getItem('user');
+        let userId = null;
+        let userStores = [];
+        
+        if (userData) {
+            try {
+                const parsedUser = JSON.parse(userData);
+                userId = parsedUser._id;
+                userStores = parsedUser.stores || [];
+            } catch (error) {
+                console.error("Error parsing user data:", error);
+            }
+        }
+        
         fetch('http://localhost:5000/api/orders/pharmacy')
             .then(res => res.json())
-            .then(products => setPharmacyOrders(products));
-    }, []);
+            .then(async orders => {
+                // Enrich orders with user details
+                const enrichedOrders = await enrichOrdersWithUserDetails(orders);
+                
+                // Filter orders based on user role
+                if (userRole === 'admin' && userId) {
+                    // Admin can only see orders from their own stores
+                    const filteredOrders = enrichedOrders.filter(order => {
+                        // If the order was requested by this admin
+                        if (order.requestedBy === userId) return true;
+                        
+                        // If the order is from a store owned by this admin
+                        if (order.store_id && userStores.includes(order.store_id)) return true;
+                        
+                        // If the order has a store_name that matches one of the admin's stores
+                        if (order.store_name && userStores.some(store => 
+                            store.name === order.store_name || store.store_name === order.store_name
+                        )) return true;
+                        
+                        return false;
+                    });
+                    
+                    setPharmacyOrders(filteredOrders);
+                } else {
+                    // Superadmin can see all orders
+                    setPharmacyOrders(enrichedOrders);
+                }
+            })
+            .catch(error => {
+                console.error("Error fetching pharmacy orders:", error);
+                toast.error("Failed to fetch pharmacy orders");
+            });
+    }, [userRole]); // Add userRole as dependency
 
     // get categories data
     useEffect(() => {
@@ -113,8 +214,8 @@ const PharmacyOrders = () => {
 
     // Update the useEffect for user role to handle API failures gracefully
     useEffect(() => {
-        // Default to superadmin role to ensure buttons are visible
-        setUserRole('superadmin');
+        // Default to admin role for safety
+        setUserRole('admin');
         
         // Try to get user data from localStorage
         const userData = localStorage.getItem('user');
@@ -136,6 +237,7 @@ const PharmacyOrders = () => {
     // Handle order approval
     const handleApproveOrder = (orderId) => {
         // Show loading indicator or disable buttons if needed
+        setIsLoading(true);
         
         fetch(`http://localhost:5000/api/orders/pharmacy/${orderId}/approve`, {
             method: 'PATCH',
@@ -154,18 +256,32 @@ const PharmacyOrders = () => {
             })
             .then(data => {
                 if (data.success) {
-                    toast.success('Order approved successfully');
+                    toast.success(data.message || 'Order approved successfully');
+                    
                     // Update the orders list
                     setPharmacyOrders(pharmacyOrders.map(order => 
                         order._id === orderId ? {...order, status: 'approved'} : order
                     ));
+                    
+                    // Optionally refresh the page to show updated stock
+                    // window.location.reload();
+                    
+                    // Or fetch the orders again
+                    fetch('http://localhost:5000/api/orders/pharmacy')
+                        .then(res => res.json())
+                        .then(async orders => {
+                            const enrichedOrders = await enrichOrdersWithUserDetails(orders);
+                            setPharmacyOrders(enrichedOrders);
+                        });
                 } else {
                     toast.error(data.message || 'Failed to approve order');
                 }
+                setIsLoading(false);
             })
             .catch(err => {
                 toast.error(`An error occurred: ${err.message}`);
                 console.error(err);
+                setIsLoading(false);
             });
     };
 
@@ -354,7 +470,31 @@ const PharmacyOrders = () => {
                                 >
                                     <td>{index + 1}</td>
                                     <td>{order._id.substring(0, 8) + '...'}</td>
-                                    <td>{order.requestedBy}</td>
+                                    <td>
+                                        <div className="flex flex-col">
+                                            <span className="font-medium">
+                                                {order.requestedByName || order.requestedBy || 'Unknown'}
+                                            </span>
+                                            {order.email ? (
+                                                <span className="text-xs text-gray-500">
+                                                    {order.email}
+                                                </span>
+                                            ) : (
+                                                <span className="text-xs text-gray-500 italic">
+                                                    No email provided
+                                                </span>
+                                            )}
+                                            {order.store_name ? (
+                                                <span className="text-xs text-gray-500">
+                                                    {order.store_name}
+                                                </span>
+                                            ) : (
+                                                <span className="text-xs text-gray-500 italic">
+                                                    No store name provided
+                                                </span>
+                                            )}
+                                        </div>
+                                    </td>
                                     <td>
                                         <span className={`badge ${
                                             order.status === 'pending' ? 'badge-warning' : 
@@ -383,8 +523,9 @@ const PharmacyOrders = () => {
                                                                     e.stopPropagation();
                                                                     handleApproveOrder(order._id);
                                                                 }}
+                                                                disabled={isLoading}
                                                                 className="btn btn-xs btn-success text-white">
-                                                                Approve
+                                                                {isLoading ? 'Processing...' : 'Approve'}
                                                             </button>
                                                             <button 
                                                                 onClick={(e) => {

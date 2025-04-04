@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const User = require('../models/User');
 
 const uri = `mongodb+srv://hett:diptesh79@quickmeds.f6ryx.mongodb.net/products?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
@@ -77,6 +78,15 @@ router.post('/', async (req, res) => {
     }
     if (!newPharmacyOrder.items) {
       newPharmacyOrder.items = [];
+    }
+    
+    // If we have user information from authentication, add it to the order
+    if (req.user) {
+      const user = await User.findById(req.user.id).select('email store_name');
+      if (user) {
+        newPharmacyOrder.email = user.email;
+        newPharmacyOrder.store_name = user.store_name;
+      }
     }
     
     const result = await pharmacyOrdersCollection.insertOne(newPharmacyOrder);
@@ -189,6 +199,7 @@ router.patch('/:id/approve', async (req, res) => {
       });
     }
     
+    // Update the order status
     const updateData = {
       $set: { 
         status: 'approved',
@@ -200,8 +211,52 @@ router.patch('/:id/approve', async (req, res) => {
     const result = await pharmacyOrdersCollection.updateOne(filter, updateData);
     
     if (result.modifiedCount === 1) {
+      // Now update the pharmacy stock for each item in the order
+      const pharmacyCollection = client.db('products').collection('pharmacies');
+      
+      // Process each item in the order
+      if (order.items && order.items.length > 0) {
+        const updatePromises = order.items.map(async (item) => {
+          if (!item.itemId) return null;
+          
+          try {
+            // Find the product by ID
+            const productFilter = { _id: new ObjectId(item.itemId) };
+            const product = await pharmacyCollection.findOne(productFilter);
+            
+            if (!product) {
+              console.warn(`Product not found: ${item.itemId}`);
+              return null;
+            }
+            
+            // Calculate new stock
+            const currentStock = parseInt(product.stock) || 0;
+            const orderQuantity = parseInt(item.quantity) || 0;
+
+            if (currentStock < orderQuantity) {
+              console.warn(`Insufficient stock for product: ${product.tradeName}. Available: ${currentStock}, Requested: ${orderQuantity}`);
+              return null;
+            }
+
+            const newStock = currentStock - orderQuantity; // Decreasing stock
+            
+            // Update the product stock
+            return pharmacyCollection.updateOne(
+              productFilter,
+              { $set: { stock: newStock } }
+            );
+          } catch (err) {
+            console.error(`Error updating product ${item.itemId}:`, err);
+            return null;
+          }
+        });
+        
+        // Wait for all updates to complete
+        await Promise.all(updatePromises);
+      }
+      
       res.json({ 
-        message: 'Order approved successfully',
+        message: 'Order approved successfully and stock updated',
         success: true 
       });
     } else {
@@ -219,6 +274,7 @@ router.patch('/:id/approve', async (req, res) => {
     });
   }
 });
+
 
 // Reject a pharmacy order
 router.patch('/:id/reject', async (req, res) => {
