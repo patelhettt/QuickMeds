@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import PrintButton from "../../components/buttons/PrintButton";
 import RefreshButton from "../../components/buttons/RefreshButton";
 import InfoCard from "../../components/InfoCard";
+import DashboardPageHeading from "../../components/headings/DashboardPageHeading";
 
 const DashboardSummary = () => {
   const [pharmacyProducts, setPharmacyProducts] = useState([]);
@@ -109,10 +110,13 @@ const DashboardSummary = () => {
 
   return (
     <div className="p-4 mt-16">
-      <div className="flex justify-between mb-6">
+      <DashboardPageHeading
+        pageHeading='Summary'
+        value={pharmacyProducts + nonPharmacyProducts}
+      >
         <RefreshButton onClick={fetchData} />
         <PrintButton />
-      </div>
+      </DashboardPageHeading>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         <InfoCard name={"Products Non Pharmacy"} status={nonPharmacyProducts} />
