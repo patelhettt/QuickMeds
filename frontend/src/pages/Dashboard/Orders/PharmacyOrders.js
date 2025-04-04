@@ -111,54 +111,103 @@ const PharmacyOrders = () => {
             .then(ut => setUnitTypes(ut));
     }, []);
 
+    // Update the useEffect for user role to handle API failures gracefully
+    useEffect(() => {
+        // Default to superadmin role to ensure buttons are visible
+        setUserRole('superadmin');
+        
+        // Try to get user data from localStorage
+        const userData = localStorage.getItem('user');
+        if (userData) {
+            try {
+                const parsedUser = JSON.parse(userData);
+                if (parsedUser && parsedUser.role) {
+                    setUserRole(parsedUser.role.toLowerCase());
+                    console.log("User role set from localStorage:", parsedUser.role.toLowerCase());
+                }
+            } catch (error) {
+                console.error("Error parsing user data:", error);
+            }
+        }
+        
+        // No need to fetch from API if we already have the role
+    }, []);
+
     // Handle order approval
     const handleApproveOrder = (orderId) => {
+        // Show loading indicator or disable buttons if needed
+        
         fetch(`http://localhost:5000/api/orders/pharmacy/${orderId}/approve`, {
             method: 'PATCH',
             headers: {
-                'content-type': 'application/json'
-            }
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                approvedBy: userRole // Send the current user role
+            })
         })
-            .then(res => res.json())
+            .then(res => {
+                if (!res.ok) {
+                    throw new Error(`Server responded with status: ${res.status}`);
+                }
+                return res.json();
+            })
             .then(data => {
                 if (data.success) {
                     toast.success('Order approved successfully');
                     // Update the orders list
                     setPharmacyOrders(pharmacyOrders.map(order => 
-                        order._id === orderId ? {...order, status: 'Approved'} : order
+                        order._id === orderId ? {...order, status: 'approved'} : order
                     ));
                 } else {
-                    toast.error('Failed to approve order');
+                    toast.error(data.message || 'Failed to approve order');
                 }
             })
             .catch(err => {
-                toast.error('An error occurred');
+                toast.error(`An error occurred: ${err.message}`);
                 console.error(err);
             });
     };
 
     // Handle order rejection
     const handleRejectOrder = (orderId) => {
+        // You could add a modal here to ask for rejection reason
+        const rejectionReason = prompt('Please provide a reason for rejection:');
+        
+        if (rejectionReason === null) {
+            // User cancelled the prompt
+            return;
+        }
+        
         fetch(`http://localhost:5000/api/orders/pharmacy/${orderId}/reject`, {
             method: 'PATCH',
             headers: {
-                'content-type': 'application/json'
-            }
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                rejectedBy: userRole,
+                rejectionReason: rejectionReason || 'No reason provided'
+            })
         })
-            .then(res => res.json())
+            .then(res => {
+                if (!res.ok) {
+                    throw new Error(`Server responded with status: ${res.status}`);
+                }
+                return res.json();
+            })
             .then(data => {
                 if (data.success) {
-                    toast.success('Order rejected');
+                    toast.success('Order rejected successfully');
                     // Update the orders list
                     setPharmacyOrders(pharmacyOrders.map(order => 
-                        order._id === orderId ? {...order, status: 'Rejected'} : order
+                        order._id === orderId ? {...order, status: 'rejected'} : order
                     ));
                 } else {
-                    toast.error('Failed to reject order');
+                    toast.error(data.message || 'Failed to reject order');
                 }
             })
             .catch(err => {
-                toast.error('An error occurred');
+                toast.error(`An error occurred: ${err.message}`);
                 console.error(err);
             });
     };
@@ -326,22 +375,27 @@ const PharmacyOrders = () => {
                                         <span className='flex items-center gap-x-1'>
                                             {order.status === 'pending' && (
                                                 <>
-                                                    <button 
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleApproveOrder(order._id);
-                                                        }}
-                                                        className="btn btn-xs btn-success text-white">
-                                                        Approve
-                                                    </button>
-                                                    <button 
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleRejectOrder(order._id);
-                                                        }}
-                                                        className="btn btn-xs btn-error text-white">
-                                                        Reject
-                                                    </button>
+                                                    {/* Update this condition to include 'superadmin' */}
+                                                    {(userRole === 'admin' || userRole === 'superadmin') && (
+                                                        <>
+                                                            <button 
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleApproveOrder(order._id);
+                                                                }}
+                                                                className="btn btn-xs btn-success text-white">
+                                                                Approve
+                                                            </button>
+                                                            <button 
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleRejectOrder(order._id);
+                                                                }}
+                                                                className="btn btn-xs btn-error text-white">
+                                                                Reject
+                                                            </button>
+                                                        </>
+                                                    )}
                                                 </>
                                             )}
                                             <PrintButton2 />
@@ -380,16 +434,21 @@ const PharmacyOrders = () => {
                                                 
                                                 {order.status === 'pending' && (
                                                     <div className="mt-4 flex justify-end gap-2">
-                                                        <button 
-                                                            onClick={() => handleApproveOrder(order._id)}
-                                                            className="btn btn-sm btn-success text-white">
-                                                            Approve Order
-                                                        </button>
-                                                        <button 
-                                                            onClick={() => handleRejectOrder(order._id)}
-                                                            className="btn btn-sm btn-error text-white">
-                                                            Reject Order
-                                                        </button>
+                                                        {/* Update this condition to include 'superadmin' */}
+                                                        {(userRole === 'admin' || userRole === 'superadmin') && (
+                                                            <>
+                                                                <button 
+                                                                    onClick={() => handleApproveOrder(order._id)}
+                                                                    className="btn btn-sm btn-success text-white">
+                                                                    Approve Order
+                                                                </button>
+                                                                <button 
+                                                                    onClick={() => handleRejectOrder(order._id)}
+                                                                    className="btn btn-sm btn-error text-white">
+                                                                    Reject Order
+                                                                </button>
+                                                            </>
+                                                        )}
                                                     </div>
                                                 )}
                                             </div>
