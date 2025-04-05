@@ -13,6 +13,9 @@ import { toast } from 'react-toastify';
 import LinkComponents from '../../components/navbar/LinkComponents';
 import logo from '../../Assets/logo.png';
 import DetailsComponent from '../../components/navbar/DetailsComponent';
+import DashboardPageHeading from '../../components/headings/DashboardPageHeading';
+import RefreshButton from '../../components/buttons/RefreshButton';
+import PrintButton from '../../components/buttons/PrintButton';
 
 const Dashboard = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -137,7 +140,7 @@ const Dashboard = () => {
                         {(userRole === 'admin' || userRole === 'superadmin') && (
                             <DetailsComponent
                                 icon={<RiShoppingCartFill className='text-lg' />}
-                                name={'Inventory Stock'}
+                                name={'Order Status'}
                                 subMenus={
                                     [
                                         <LinkComponents
@@ -147,6 +150,26 @@ const Dashboard = () => {
 
                                         <LinkComponents
                                             to={'orders/non-pharmacy'}
+                                            icon={<RiProfileFill className='text-lg' />}
+                                            name={'Non Pharmacy'} />
+                                    ]
+                                } />
+                        )}
+
+                        {/* /Inventory - Inventory for admins */}
+                        {(userRole === 'admin') && (
+                            <DetailsComponent
+                                icon={<RiShoppingCartFill className='text-lg' />}
+                                name={'Inventory'}
+                                subMenus={
+                                    [
+                                        <LinkComponents
+                                            to={'inventory/pharmacy'}
+                                            icon={<MdLocalPharmacy className='text-lg' />}
+                                            name={'Pharmacy'} />,
+
+                                        <LinkComponents
+                                            to={'inventory/non-pharmacy'}
                                             icon={<RiProfileFill className='text-lg' />}
                                             name={'Non Pharmacy'} />
                                     ]

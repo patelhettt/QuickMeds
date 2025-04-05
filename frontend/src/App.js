@@ -34,6 +34,7 @@ import ExpiresOrDamagesReturns from './pages/Dashboard/Returns/ExpiresOrDamagesR
 import SuppliersList from './pages/Dashboard/Suppliers/SuppliersList';
 import SuppliersDocuments from './pages/Dashboard/Suppliers/SuppliersDocuments';
 import SuppliersPayments from './pages/Dashboard/Suppliers/SuppliersPayments';
+import PharInventoryy from './pages/Dashboard/Inven/PharInventoryy';
 import POS from './pages/POS';
 
 function App() {
@@ -60,6 +61,8 @@ function App() {
           <Route path='requested-items/non-pharmacy' element={<NonPharmacyItems />} />
           <Route path='orders/pharmacy' element={<PharmacyOrders />} />
           <Route path='orders/non-pharmacy' element={<NonPharmacyOrders />} />
+          <Route path='inventory/pharmacy' element={<PharInventoryy />} />
+          {/* <Route path='inventory/non-pharmacy' element={<NonPharmacyInventory />} /> */}
           <Route path='purchases/pharmacy' element={<PurchasePharmacyProducts />} />
           <Route path='purchases/non-pharmacy' element={<PurchaseNonPharmacyProducts />} />
           <Route path='setup/categories' element={<Categories />} />

@@ -524,7 +524,7 @@ const PharmacyOrders = () => {
                                                                     handleApproveOrder(order._id);
                                                                 }}
                                                                 disabled={isLoading}
-                                                                className="btn btn-xs btn-success text-white">
+                                                                className="btn btn-xs btn-success text-black">
                                                                 {isLoading ? 'Processing...' : 'Approve'}
                                                             </button>
                                                             <button 
@@ -532,7 +532,7 @@ const PharmacyOrders = () => {
                                                                     e.stopPropagation();
                                                                     handleRejectOrder(order._id);
                                                                 }}
-                                                                className="btn btn-xs btn-error text-white">
+                                                                className="btn btn-xs btn-error text-black">
                                                                 Reject
                                                             </button>
                                                         </>
@@ -580,12 +580,12 @@ const PharmacyOrders = () => {
                                                             <>
                                                                 <button 
                                                                     onClick={() => handleApproveOrder(order._id)}
-                                                                    className="btn btn-sm btn-success text-white">
+                                                                    className="btn btn-sm btn-success text-black">
                                                                     Approve Order
                                                                 </button>
                                                                 <button 
                                                                     onClick={() => handleRejectOrder(order._id)}
-                                                                    className="btn btn-sm btn-error text-white">
+                                                                    className="btn btn-sm btn-error text-black">
                                                                     Reject Order
                                                                 </button>
                                                             </>
