@@ -6,8 +6,8 @@ import { toast } from 'react-toastify';
 import NewButton from '../../components/buttons/NewButton';
 import axios from 'axios';
 import AddEmployeeModal from '../../components/employees/AddEmployeeModal';
-import EditEmployeeModal from '../../components/employees/EditEmployeeModal';
 import EmployeeTable from '../../components/employees/EmployeeTable';
+import EmployeeForm from '../../components/employees/EmployeeForm';
 
 const Employees = () => {
     const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
@@ -23,10 +23,19 @@ const Employees = () => {
 
     useEffect(() => {
         // Get user info from localStorage
-        const userData = JSON.parse(localStorage.getItem('user')) || {};
-        setUserRole(userData.role || '');
-        setUserCity(userData.city || '');
-        setUserStore(userData.store_name || '');
+        const user = localStorage.getItem('user');
+        if (user) {
+            try {
+                const userData = JSON.parse(user);
+                console.log("User data from localStorage:", userData);
+                setUserRole(userData.role || '');
+                setUserCity(userData.city || '');
+                setUserStore(userData.store_name || '');
+            } catch (error) {
+                console.error("Error parsing user data:", error);
+                toast.error("Error loading user profile");
+            }
+        }
         
         fetchEmployees();
     }, []);
@@ -38,6 +47,7 @@ const Employees = () => {
             const response = await axios.get(`${API_URL}/api/products/employees`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
+            console.log("Fetched employees:", response.data);
             setEmployees(response.data);
             setIsLoading(false);
         } catch (error) {
@@ -90,19 +100,17 @@ const Employees = () => {
             }
 
             // Validate password if creating a new user
-            if (!isEditing) {
-                const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-                if (!passwordRegex.test(formData.password)) {
-                    toast.error("Password must be at least 8 characters and include uppercase, lowercase, number, and special character");
-                    setIsLoading(false);
-                    return;
-                }
+            const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+            if (!passwordRegex.test(formData.password)) {
+                toast.error("Password must be at least 8 characters and include uppercase, lowercase, number, and special character");
+                setIsLoading(false);
+                return;
+            }
 
-                if (formData.password !== formData.confirmPassword) {
-                    toast.error("Passwords do not match");
-                    setIsLoading(false);
-                    return;
-                }
+            if (formData.password !== formData.confirmPassword) {
+                toast.error("Passwords do not match");
+                setIsLoading(false);
+                return;
             }
 
             const response = await axios.post(`${API_URL}/api/products/auth/register`, formData, {
@@ -125,9 +133,10 @@ const Employees = () => {
 
     // Handle edit employee
     const handleEdit = (employee) => {
+        console.log("Edit button clicked for employee:", employee);
         setEditingEmployee(employee);
         setIsEditing(true);
-        document.getElementById('edit-employee').checked = true;
+        document.getElementById('edit-product').checked = true;
     };
 
     // Update employee with enhanced validation
@@ -179,9 +188,38 @@ const Employees = () => {
                 return;
             }
 
+            // Validate password if provided
+            if (formData.password) {
+                const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+                if (!passwordRegex.test(formData.password)) {
+                    toast.error("Password must be at least 8 characters and include uppercase, lowercase, number, and special character");
+                    setIsLoading(false);
+                    return;
+                }
+                
+                if (formData.password !== formData.confirmPassword) {
+                    toast.error("Passwords do not match");
+                    setIsLoading(false);
+                    return;
+                }
+            }
+
+            // Create a copy of formData without password fields if empty
+            const updateData = { ...formData };
+            
+            // Remove password fields if they're empty (not being updated)
+            if (!updateData.password) {
+                delete updateData.password;
+                delete updateData.confirmPassword;
+            } else {
+                // Only need to send the password, not the confirmation
+                delete updateData.confirmPassword;
+            }
+
+            // Use the correct API endpoint for updating employees
             const response = await axios.put(
-                `${API_URL}/api/update/employees/${editingEmployee._id}`,
-                formData,
+                `${API_URL}/api/products/employees/${editingEmployee._id}`,
+                updateData,
                 {
                     headers: {
                         'Content-Type': 'application/json',
@@ -215,7 +253,7 @@ const Employees = () => {
     const handleCancelEdit = () => {
         setIsEditing(false);
         setEditingEmployee(null);
-        document.getElementById('edit-employee').checked = false;
+        document.getElementById('edit-product').checked = false;
     };
 
     return (
@@ -244,20 +282,35 @@ const Employees = () => {
                     />
                 </div>
 
-                {/* Edit Employee Modal */}
+                {/* Edit Employee Modal - Using the same structure as Add Employee */}
                 <input type="checkbox" id="edit-product" className="modal-toggle" />
                 <div className="modal" role="dialog">
-                    {editingEmployee && (
-                        <EditEmployeeModal 
-                            employee={editingEmployee}
-                            onSubmit={handleUpdate}
-                            onCancel={handleCancelEdit}
-                            userRole={userRole}
-                            userCity={userCity}
-                            userStore={userStore}
-                        />
-                    )}
+                    <div className="modal-box w-11/12 max-w-5xl mx-auto">
+                        <div className='flex mb-3'>
+                            <h3 className="font-bold text-lg">Edit Employee</h3>
+                        </div>
+                        {editingEmployee && (
+                            <EmployeeForm 
+                                employee={editingEmployee}
+                                onSubmit={handleUpdate}
+                                onCancel={handleCancelEdit}
+                                isEditing={true}
+                                userRole={userRole}
+                                userCity={userCity}
+                                userStore={userStore}
+                            />
+                        )}
+                    </div>
                 </div>
+            </div>
+
+            <div className="mt-4">
+                {/* Debug information */}
+                <p className="text-xs text-gray-500 mb-2">
+                    Current user role: {userRole || 'Not set'} | 
+                    City: {userCity || 'Not set'} | 
+                    Store: {userStore || 'Not set'}
+                </p>
             </div>
 
             {/* Employee Table */}
@@ -268,7 +321,7 @@ const Employees = () => {
             ) : (
                 <EmployeeTable
                     employees={employees}
-                    userRole={userRole}
+                    userRole={userRole || 'superadmin'} // Force superadmin if role is not set
                     userCity={userCity}
                     userStore={userStore}
                     onEdit={handleEdit}

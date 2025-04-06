@@ -12,7 +12,6 @@ import Register from './pages/Authentication/Register';
 import NotFound from './pages/NotFound';
 import About from './pages/About';
 import Contact from './pages/Contact';
-import Dashboard from './pages/Dashboard/Dashboard';
 import AdminDashboard from './pages/Dashboard/AdminDashboard';
 import EmployeeDashboard from './pages/Dashboard/EmployeeDashboard';
 import DashboardSummary from './pages/Dashboard/DashboardSummary';
@@ -38,7 +37,8 @@ import ExpiresOrDamagesReturns from './pages/Dashboard/Returns/ExpiresOrDamagesR
 import SuppliersList from './pages/Dashboard/Suppliers/SuppliersList';
 import SuppliersDocuments from './pages/Dashboard/Suppliers/SuppliersDocuments';
 import SuppliersPayments from './pages/Dashboard/Suppliers/SuppliersPayments';
-import PharInventoryy from './pages/Dashboard/Inven/PharInventoryy';
+import PharInventory from './pages/Dashboard/Inven/PharInventory';
+import AllProductsInventory from './pages/Dashboard/Inven/AllProductsInventory';
 import POS from './pages/POS';
 
 function App() {
@@ -61,7 +61,7 @@ function App() {
         <Route path="settings" element={<Settings />} />
         
         {/* SuperAdmin Dashboard */}
-        <Route path="dashboard" element={<Dashboard />}>
+        <Route path="dashboard" element={<AdminDashboard />}>
           <Route index element={<DashboardSummary />} />
           <Route path='products/pharmacy' element={<PharmacyProducts />} />
           <Route path='products/non-pharmacy' element={<NonPharmacyProducts />} />
@@ -69,7 +69,8 @@ function App() {
           <Route path='requested-items/non-pharmacy' element={<NonPharmacyItems />} />
           <Route path='orders/pharmacy' element={<PharmacyOrders />} />
           <Route path='orders/non-pharmacy' element={<NonPharmacyOrders />} />
-          <Route path='inventory/pharmacy' element={<PharInventoryy />} />
+          <Route path='inventory/all-products' element={<AllProductsInventory />} />
+          <Route path='inventory/pharmacy' element={<PharInventory />} />
           {/* <Route path='inventory/non-pharmacy' element={<NonPharmacyInventory />} /> */}
           <Route path='purchases/pharmacy' element={<PurchasePharmacyProducts />} />
           <Route path='purchases/non-pharmacy' element={<PurchaseNonPharmacyProducts />} />
@@ -93,7 +94,8 @@ function App() {
           <Route path='requested-items/non-pharmacy' element={<NonPharmacyItems />} />
           <Route path='orders/pharmacy' element={<PharmacyOrders />} />
           <Route path='orders/non-pharmacy' element={<NonPharmacyOrders />} />
-          <Route path='inventory/pharmacy' element={<PharInventoryy />} />
+          <Route path='inventory/all-products' element={<AllProductsInventory />} />
+          <Route path='inventory/pharmacy' element={<PharInventory />} />
           {/* <Route path='inventory/non-pharmacy' element={<NonPharmacyInventory />} /> */}
           <Route path='purchases/pharmacy' element={<PurchasePharmacyProducts />} />
           <Route path='purchases/non-pharmacy' element={<PurchaseNonPharmacyProducts />} />

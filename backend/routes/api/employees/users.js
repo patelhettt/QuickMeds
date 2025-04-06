@@ -131,6 +131,13 @@ router.put('/:id', checkRole('admin'), async (req, res) => {
             return res.status(400).json({ message: "Invalid employee ID" });
         }
 
+        // Handle password update if provided
+        if (updateData.password) {
+            // Hash the new password
+            const hashedPassword = await bcrypt.hash(updateData.password, 10);
+            updateData.password = hashedPassword;
+        }
+
         // Use userCollection instead of User model
         const result = await userCollection.updateOne(
             { _id: new ObjectId(id) },

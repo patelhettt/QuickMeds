@@ -39,9 +39,13 @@ const EmployeeTable = ({ employees, userRole, userCity, userStore, onEdit, apiUr
                                 employee.store_name || 'N/A',
                                 employee.role,
                                 <span className='flex items-center gap-x-1'>
-                                    {(userRole === 'superadmin' || (userRole === 'admin' && employee.role !== 'admin')) && (
-                                        <EditButton onClick={() => onEdit(employee)} />
-                                    )}
+                                    {/* Always show edit button for now to debug */}
+                                    <EditButton 
+                                        onClick={() => {
+                                            console.log("Edit button clicked for:", employee.firstName);
+                                            onEdit(employee);
+                                        }} 
+                                    />
                                     <DeleteButton
                                         deleteApiLink={`${apiUrl}/api/products/employees/${employee._id}`}
                                         name={`${employee.firstName} ${employee.lastName}`}

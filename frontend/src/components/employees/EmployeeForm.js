@@ -107,21 +107,36 @@ const EmployeeForm = ({ employee, onSubmit, onCancel, isEditing = false, userRol
             errors.store_name = "As an admin, you can only add employees to your store";
         }
         
-        // Password validation - only for adding new employees
+        // Password validation
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+        
         if (!isEditing) {
-            const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-            
+            // Mandatory password for new employees
             if (!formData.password) {
                 errors.password = "Password is required";
             } else if (!passwordRegex.test(formData.password)) {
                 errors.password = "Password must be at least 8 characters and include uppercase, lowercase, number, and special character";
             }
             
-            // Confirm password validation
+            // Confirm password validation for new employees
             if (!formData.confirmPassword) {
                 errors.confirmPassword = "Please confirm your password";
             } else if (formData.password !== formData.confirmPassword) {
                 errors.confirmPassword = "Passwords do not match";
+            }
+        } else {
+            // Optional password update for existing employees
+            if (formData.password) {
+                if (!passwordRegex.test(formData.password)) {
+                    errors.password = "Password must be at least 8 characters and include uppercase, lowercase, number, and special character";
+                }
+                
+                // Only check confirm password if a new password was entered
+                if (!formData.confirmPassword) {
+                    errors.confirmPassword = "Please confirm your password";
+                } else if (formData.password !== formData.confirmPassword) {
+                    errors.confirmPassword = "Passwords do not match";
+                }
             }
         }
         
@@ -268,8 +283,8 @@ const EmployeeForm = ({ employee, onSubmit, onCancel, isEditing = false, userRol
                     )}
                 </div>
                 
-                {/* Password fields - only show when adding new employee */}
-                {!isEditing && (
+                {/* Password fields */}
+                {!isEditing ? (
                     <>
                         <div>
                             <Input 
@@ -293,6 +308,38 @@ const EmployeeForm = ({ employee, onSubmit, onCancel, isEditing = false, userRol
                                 type='password' 
                                 value={formData.confirmPassword}
                                 onChange={handleInputChange}
+                            />
+                            {formErrors.confirmPassword && (
+                                <p className="text-xs text-red-500 mt-1">{formErrors.confirmPassword}</p>
+                            )}
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        <div>
+                            <Input 
+                                title={'New Password (Optional)'} 
+                                name='password' 
+                                isRequired={false}
+                                type='password' 
+                                value={formData.password}
+                                onChange={handleInputChange}
+                                placeholder="Leave blank to keep current password"
+                            />
+                            {formErrors.password && (
+                                <p className="text-xs text-red-500 mt-1">{formErrors.password}</p>
+                            )}
+                        </div>
+                        
+                        <div>
+                            <Input 
+                                title={'Confirm New Password'} 
+                                name='confirmPassword' 
+                                isRequired={false}
+                                type='password' 
+                                value={formData.confirmPassword}
+                                onChange={handleInputChange}
+                                placeholder="Leave blank to keep current password"
                             />
                             {formErrors.confirmPassword && (
                                 <p className="text-xs text-red-500 mt-1">{formErrors.confirmPassword}</p>

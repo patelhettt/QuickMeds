@@ -1,125 +1,105 @@
 import React from 'react';
+import { ShoppingBag, Plus, Calendar } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { toast } from 'sonner';
+import { formatPrice } from '../../pages/POSCart';
 
 /**
  * Product card component for the POS system
  * Displays product information and allows adding to cart
  */
-const ProductCard = ({ 
-    product, 
-    cart, 
-    approvedOrders, 
-    addToCart 
-}) => {
-    // Find this product in approved orders to get approved quantity
-    const getApprovedQuantity = () => {
-        let totalApproved = 0;
-        
-        approvedOrders.forEach(order => {
-            if (order.items && Array.isArray(order.items)) {
-                order.items.forEach(item => {
-                    if (item.itemId === product._id) {
-                        totalApproved += parseInt(item.quantity) || 0;
-                    }
-                });
-            }
-        });
-        
-        return totalApproved;
-    };
-    
-    const approvedQty = getApprovedQuantity();
-    const inStock = approvedQty > 0;
+const ProductCard = ({ product, cart, addToCart }) => {
     const isInCart = cart.some(item => item._id === product._id);
-    const cartItem = cart.find(item => item._id === product._id);
-    const remainingApproved = cartItem 
-        ? approvedQty - cartItem.quantity 
-        : approvedQty;
-    
-    const handleAddToCart = () => {
-        if (inStock) {
-            addToCart(product, approvedQty);
-        }
+    const stock = parseInt(product.stock || 0);
+    const price = product.Unit_MRP || product.unitMrp || 0;
+    const productName = product.tradeName || product.Product_name || 'Unknown Product';
+    const category = product.category || product.Category || 'Unknown';
+    const company = product.Company || product.company || '';
+
+    // Format date
+    const formatDate = (dateString) => {
+        if (!dateString) return 'N/A';
+        const date = new Date(dateString);
+        return date.toLocaleDateString();
     };
-    
+
+    const addedDate = formatDate(product.addedAt || product.createdAt || new Date().toISOString());
+
+    // Determine stock status for styling
+    const getStockStatus = () => {
+        if (stock <= 0) return 'Out of Stock';
+        if (stock <= 5) return 'Low Stock';
+        return `${stock} in stock`;
+    };
+
+    const getStockColor = () => {
+        if (stock <= 0) return 'bg-red-100 text-red-800';
+        if (stock <= 5) return 'bg-yellow-100 text-yellow-800';
+        return 'bg-green-100 text-green-800';
+    };
+
     return (
         <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.2 }}
-            className={`bg-white rounded-lg overflow-hidden border shadow-sm hover:shadow-md transition-all ${
-                !inStock ? 'opacity-70' : ''
-            }`}
+            className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow"
         >
             <div className="p-4">
-                <div className="flex items-baseline justify-between mb-1">
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        product.type === 'pharmacy' 
-                            ? 'bg-primary/10 text-primary' 
-                            : 'bg-secondary/10 text-secondary'
-                    }`}>
-                        {product.type === 'pharmacy' ? 'Pharmacy' : 'Non-Pharmacy'}
-                    </span>
-                    {!inStock && (
-                        <span className="bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full">
-                            Not Approved
-                        </span>
-                    )}
-                </div>
-                
-                <h3 className="text-base font-semibold text-gray-900 line-clamp-1">
-                    {product.tradeName || product.Product_name}
-                </h3>
-                
-                {product.genericName && (
-                    <p className="text-sm text-gray-500 mb-2 line-clamp-1">
-                        {product.genericName}
-                    </p>
-                )}
-                
-                <div className="flex items-baseline justify-between mt-3">
-                    <span className="text-lg font-bold text-primary">
-                        ${((product.Unit_MRP || product.unitMrp || 0)).toFixed(2)}
-                    </span>
-                    <div className="text-sm flex flex-col items-end">
-                        {approvedQty > 0 ? (
-                            <span className="text-green-600 font-medium">
-                                Approved: {approvedQty}
+                <div className="flex justify-between items-start">
+                    <div className="flex-1 mr-2">
+                        <h3 className="font-medium text-gray-900 text-sm mb-1 line-clamp-2">
+                            {productName}
+                        </h3>
+                        <div className="flex flex-wrap gap-1 mb-2">
+                            <span className="inline-block bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded">
+                                {category}
                             </span>
-                        ) : (
-                            <span className="text-gray-500">
-                                Not approved
-                            </span>
-                        )}
-                        {cartItem && (
-                            <span className="text-blue-600 text-xs">
-                                In cart: {cartItem.quantity} 
-                                {remainingApproved > 0 ? ` (${remainingApproved} remaining)` : ''}
-                            </span>
-                        )}
+                            {company && (
+                                <span className="inline-block bg-gray-50 text-gray-500 text-xs px-2 py-0.5 rounded">
+                                    {company}
+                                </span>
+                            )}
+                        </div>
                     </div>
+                    <span className="font-bold text-primary text-lg whitespace-nowrap">
+                        {formatPrice(price)}
+                    </span>
                 </div>
-            </div>
-            
-            <div className="px-4 pb-4">
+
+                <div className="flex justify-between items-center mt-1">
+                    <div className="flex items-center text-xs text-gray-500">
+                        <Calendar className="h-3 w-3 mr-1" />
+                        <span>Added: {addedDate}</span>
+                    </div>
+
+                    <span className={`text-xs px-2 py-1 rounded-full ${getStockColor()}`}>
+                        {getStockStatus()}
+                    </span>
+                </div>
+
                 <button
-                    onClick={handleAddToCart}
-                    disabled={!inStock || (cartItem && cartItem.quantity >= approvedQty)}
-                    className={`w-full py-2 rounded-md text-sm font-medium transition-colors ${
-                        inStock
-                            ? cartItem && cartItem.quantity >= approvedQty
-                                ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                                : isInCart
-                                    ? 'bg-secondary text-white hover:bg-secondary/90'
-                                    : 'bg-primary text-white hover:bg-primary/90'
-                            : 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                    }`}
+                    onClick={() => addToCart(product)}
+                    disabled={stock <= 0 || isInCart}
+                    className={`mt-3 w-full py-1.5 rounded-md text-sm font-medium transition-colors ${stock <= 0
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                            : isInCart
+                                ? 'bg-green-50 text-green-600 border border-green-200'
+                                : 'bg-primary/10 text-primary hover:bg-primary/20'
+                        }`}
                 >
-                    {isInCart 
-                        ? remainingApproved > 0 ? 'Add More' : 'Max Approved' 
-                        : 'Add to Cart'}
+                    {isInCart ? (
+                        <div className="flex items-center justify-center">
+                            <ShoppingBag className="h-4 w-4 mr-1" />
+                            In Cart
+                        </div>
+                    ) : stock <= 0 ? (
+                        'Out of Stock'
+                    ) : (
+                        <div className="flex items-center justify-center">
+                            <Plus className="h-4 w-4 mr-1" />
+                            Add to Cart
+                        </div>
+                    )}
                 </button>
             </div>
         </motion.div>
