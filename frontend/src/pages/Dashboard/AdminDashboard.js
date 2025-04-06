@@ -1,26 +1,21 @@
 import React from 'react';
-import { AiFillCreditCard, AiFillCopyrightCircle, AiFillSetting } from 'react-icons/ai';
-import { BiCategory, BiUnite, BiGitPullRequest } from 'react-icons/bi';
-import { BsCreditCard2BackFill } from 'react-icons/bs';
+import { AiFillCreditCard } from 'react-icons/ai';
+import { BiGitPullRequest } from 'react-icons/bi';
 import { FaUsers, FaThList, FaUser, FaSignOutAlt } from 'react-icons/fa';
-import { HiDocumentText, HiMenuAlt3 } from 'react-icons/hi';
+import { HiMenuAlt3 } from 'react-icons/hi';
 import { MdLocalPharmacy, MdSpaceDashboard } from 'react-icons/md';
-import { TbTruckReturn, TbTruckDelivery } from 'react-icons/tb';
-import { RiProductHuntFill, RiAdminFill, RiShoppingCartFill, RiProfileFill, RiFileDamageFill, RiMedicineBottleFill } from 'react-icons/ri';
+import { TbTruckReturn } from 'react-icons/tb';
+import { RiAdminFill, RiShoppingCartFill, RiProfileFill, RiFileDamageFill, RiMedicineBottleFill } from 'react-icons/ri';
 import { Link, Outlet, Navigate, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import LinkComponents from '../../components/navbar/LinkComponents';
 import logo from '../../Assets/logo.png';
 import DetailsComponent from '../../components/navbar/DetailsComponent';
-import DashboardPageHeading from '../../components/headings/DashboardPageHeading';
-import RefreshButton from '../../components/buttons/RefreshButton';
-import PrintButton from '../../components/buttons/PrintButton';
 
-const Dashboard = () => {
+const AdminDashboard = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
-    const [userRole, setUserRole] = useState('employee');
     const navigate = useNavigate();
     
     useEffect(() => {
@@ -34,19 +29,19 @@ const Dashboard = () => {
                 position: "top-right",
                 autoClose: 3000
             });
-            navigate('/login', { state: { from: '/dashboard' } });
+            navigate('/login', { state: { from: '/admin-dashboard' } });
         } else {
             setIsAuthenticated(true);
             try {
                 const user = JSON.parse(userString);
-                setUserRole(user.role || 'employee');
                 
                 // Redirect based on role
                 if (user.role === 'employee') {
                     navigate('/employee-dashboard');
-                } else if (user.role === 'admin') {
-                    navigate('/admin-dashboard');
-                } else if (user.role !== 'superadmin') {
+                } else if (user.role === 'superadmin') {
+                    navigate('/dashboard');
+                } else if (user.role !== 'admin') {
+                    // If not admin, employee, or superadmin
                     navigate('/login');
                 }
             } catch (error) {
@@ -77,58 +72,39 @@ const Dashboard = () => {
     }
 
     if (!isAuthenticated) {
-        return <Navigate to="/login" state={{ from: '/dashboard' }} />;
+        return <Navigate to="/login" state={{ from: '/admin-dashboard' }} />;
     }
 
     return (
         <div className="drawer drawer-mobile">
-            <input id="dashboard" className="drawer-toggle" />
+            <input id="admin-dashboard" className="drawer-toggle" />
             <div className="drawer-content">
                 <div className="sticky top-0 z-30 flex justify-between items-center bg-base-100 p-2 shadow-sm lg:hidden">
                     <Link to="/" className="flex items-center">
                         <img className='w-8 mr-2' src={logo} alt="logo" />
                         <span className="font-bold text-lg">QuickMeds</span>
                     </Link>
-                    <label htmlFor="dashboard" className="btn btn-ghost drawer-button lg:hidden">
+                    <label htmlFor="admin-dashboard" className="btn btn-ghost drawer-button lg:hidden">
                         <HiMenuAlt3 className="text-2xl" />
                     </label>
                 </div>
                 <Outlet />
             </div>
-            <div className="drawer-side lg:bg-yellow-200 md:bg-yellow-200 w-52">
-                <label htmlFor="dashboard" className="drawer-overlay"></label>
+            <div className="drawer-side lg:bg-blue-200 md:bg-blue-200 w-52">
+                <label htmlFor="admin-dashboard" className="drawer-overlay"></label>
                 <div className="flex flex-col justify-between h-screen pb-6">
                     <nav className="flex flex-col mt-6 space-y-2">
                         <Link className="text-xl font-semibold uppercase flex items-center mb-8 px-4" to='/'>
                             <RiMedicineBottleFill className="text-2xl text-primary mr-2" />
                             <span className="font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">QuickMeds</span>
-                            <span className="ml-1 text-xs bg-red-500 text-white px-1 rounded">Super</span>
                         </Link>
 
                         <LinkComponents to={''} icon={<MdSpaceDashboard className='text-lg' />} name={'Dashboard'} />
 
-                        {/* Products */}
-                        <DetailsComponent
-                            icon={<RiProductHuntFill className='text-lg' />}
-                            name={'Products'}
-                            subMenus={
-                                [
-                                    <LinkComponents
-                                        to={'products/pharmacy'}
-                                        icon={<MdLocalPharmacy className='text-lg' />}
-                                        name={'Pharmacy'} />,
-
-                                    <LinkComponents
-                                        to={'products/non-pharmacy'}
-                                        icon={<RiProfileFill className='text-lg' />}
-                                        name={'Non Pharmacy'} />
-                                ]
-                            } />
-
-                        {/* Requested Items */}
+                        {/* Request For Items - Renamed */}
                         <DetailsComponent
                             icon={<BiGitPullRequest className='text-lg' />}
-                            name={'Requested Items'}
+                            name={'Request For Items'}
                             subMenus={
                                 [
                                     <LinkComponents
@@ -156,6 +132,24 @@ const Dashboard = () => {
 
                                     <LinkComponents
                                         to={'orders/non-pharmacy'}
+                                        icon={<RiProfileFill className='text-lg' />}
+                                        name={'Non Pharmacy'} />
+                                ]
+                            } />
+
+                        {/* Inventory */}
+                        <DetailsComponent
+                            icon={<RiShoppingCartFill className='text-lg' />}
+                            name={'Inventory'}
+                            subMenus={
+                                [
+                                    <LinkComponents
+                                        to={'inventory/pharmacy'}
+                                        icon={<MdLocalPharmacy className='text-lg' />}
+                                        name={'Pharmacy'} />,
+
+                                    <LinkComponents
+                                        to={'inventory/non-pharmacy'}
                                         icon={<RiProfileFill className='text-lg' />}
                                         name={'Non Pharmacy'} />
                                 ]
@@ -197,57 +191,11 @@ const Dashboard = () => {
                                 ]
                             } />
 
-                        {/* Settings */}
-                        <DetailsComponent
-                            icon={<AiFillSetting className='text-lg' />}
-                            name={'Settings'}
-                            subMenus={
-                                [
-                                    <LinkComponents
-                                        to={'setup/categories'}
-                                        icon={<BiCategory className='text-lg' />}
-                                        name={'Categories'} />,
-
-                                    <LinkComponents
-                                        to={'setup/unit-types'}
-                                        icon={<BiUnite className='text-lg' />}
-                                        name={'Unit Types'} />,
-
-                                    <LinkComponents
-                                        to={'setup/companies'}
-                                        icon={<AiFillCopyrightCircle className='text-lg' />}
-                                        name={'Companies'} />
-                                ]
-                            } />
-
                         {/* Employees */}
                         <LinkComponents to={'employees'} icon={<RiAdminFill className='text-lg' />} name={'Employees'} />
 
                         {/* Customers */}
                         <LinkComponents to={'customers'} icon={<FaUsers className='text-lg' />} name={'Customers'} />
-
-                        {/* Suppliers */}
-                        <DetailsComponent
-                            icon={<TbTruckDelivery className='text-lg' />}
-                            name={'Suppliers'}
-                            subMenus={
-                                [
-                                    <LinkComponents
-                                        to={'suppliers/lists'}
-                                        icon={<FaThList className='text-md' />}
-                                        name={'Lists'} />,
-
-                                    <LinkComponents
-                                        to={'suppliers/payments'}
-                                        icon={<BsCreditCard2BackFill className='text-lg' />}
-                                        name={'Payments'} />,
-
-                                    <LinkComponents
-                                        to={'suppliers/documents'}
-                                        icon={<HiDocumentText className='text-lg' />}
-                                        name={'Documents'} />
-                                ]
-                            } />
 
                         {/* POS */}
                         <LinkComponents to={'POS'} icon={<FaThList className='text-lg' />} name={'POS'} />
@@ -268,4 +216,4 @@ const Dashboard = () => {
     );
 };
 
-export default Dashboard;
+export default AdminDashboard; 

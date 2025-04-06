@@ -1,162 +1,187 @@
 import React, { useEffect, useState } from 'react';
 import PrintButton from '../../components/buttons/PrintButton';
-import Input from '../../components/form/Input';
-import TableRow from '../../components/TableRow';
-import SaveButton from '../../components/buttons/SaveButton';
-import EditButton from '../../components/buttons/EditButton';
-import DeleteButton from '../../components/buttons/DeleteButton';
 import RefreshButton from '../../components/buttons/RefreshButton';
 import DashboardPageHeading from '../../components/headings/DashboardPageHeading';
 import { toast } from 'react-toastify';
-import CancelButton from '../../components/buttons/CancelButton';
-import ModalHeading from '../../components/headings/ModalHeading';
-import ModalCloseButton from '../../components/buttons/ModalCloseButton';
 import NewButton from '../../components/buttons/NewButton';
 import axios from 'axios';
-
+import AddEmployeeModal from '../../components/employees/AddEmployeeModal';
+import EditEmployeeModal from '../../components/employees/EditEmployeeModal';
+import EmployeeTable from '../../components/employees/EmployeeTable';
 
 const Employees = () => {
-    const tableHeadItems = ['SN', 'First Name', 'Last Name', 'Email', 'Phone', 'City', 'Store Name', 'Role', 'Actions'];
-    const tableHead = (
-        <tr>
-            {tableHeadItems?.map((tableHeadItem, index) => (
-                <th key={index} className='text-xs'>
-                    {tableHeadItem}
-                </th>
-            ))}
-        </tr>
-    );
-
     const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
     const token = localStorage.getItem('token');
 
+    const [employees, setEmployees] = useState([]);
+    const [userRole, setUserRole] = useState('');
+    const [userCity, setUserCity] = useState('');
+    const [userStore, setUserStore] = useState('');
+    const [isEditing, setIsEditing] = useState(false);
+    const [editingEmployee, setEditingEmployee] = useState(null);
+    const [isLoading, setIsLoading] = useState(false);
 
-    const [userRole, setUserRole] = useState('employee');
+    useEffect(() => {
+        // Get user info from localStorage
+        const userData = JSON.parse(localStorage.getItem('user')) || {};
+        setUserRole(userData.role || '');
+        setUserCity(userData.city || '');
+        setUserStore(userData.store_name || '');
+        
+        fetchEmployees();
+    }, []);
 
-    // Convert addEmployee to use axios
-    const addEmployee = async (event) => {
-        event.preventDefault();
+    // Fetch employees from API
+    const fetchEmployees = async () => {
+        setIsLoading(true);
         try {
-            const firstName = event.target.firstName.value;
-            const lastName = event.target.lastName.value;
-            const email = event.target.email.value;
-            const password = event.target.password.value;
-            const confirmPassword = event.target.confirmPassword.value;
-            const phone = event.target.phone.value;
-            const city = event.target.city.value;
-            const store_name = event.target.store_name.value;
-            const role = event.target.role.value || 'employee';
+            const response = await axios.get(`${API_URL}/api/products/employees`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            setEmployees(response.data);
+            setIsLoading(false);
+        } catch (error) {
+            console.error("Fetch employees error:", error);
+            toast.error("Failed to load users. Please check your connection.");
+            setIsLoading(false);
+        }
+    };
 
-            if (!firstName || !lastName || !email || !password || !confirmPassword || !phone || !city || !store_name || !role) {
-                toast.error("All fields are required");
+    // Add new employee with enhanced validation
+    const addEmployee = async (event, formData) => {
+        event.preventDefault();
+        setIsLoading(true);
+
+        try {
+            // Additional validation check before submitting
+            if (userRole === 'admin') {
+                // Enforce admin restrictions
+                if (formData.city !== userCity) {
+                    toast.error("Admin can only add employees to their own city");
+                    setIsLoading(false);
+                    return;
+                }
+                if (formData.store_name !== userStore) {
+                    toast.error("Admin can only add employees to their own store");
+                    setIsLoading(false);
+                    return;
+                }
+                if (formData.role !== 'employee') {
+                    toast.error("Admin can only create employee accounts");
+                    setIsLoading(false);
+                    return;
+                }
+            }
+
+            // Validate phone format
+            const phoneDigits = formData.phone.replace(/[-()\s]/g, '');
+            if (!/^\d{10}$/.test(phoneDigits)) {
+                toast.error("Phone number must be exactly 10 digits");
+                setIsLoading(false);
                 return;
             }
 
-            if (password !== confirmPassword) {
-                toast.error("Passwords do not match");
+            // Validate names contain only alphabets
+            const nameRegex = /^[A-Za-z\s]+$/;
+            if (!nameRegex.test(formData.firstName) || !nameRegex.test(formData.lastName)) {
+                toast.error("Names should contain only alphabets");
+                setIsLoading(false);
                 return;
             }
 
-            const userDetails = { firstName, lastName, email, password, confirmPassword, phone, city, store_name, role };
+            // Validate password if creating a new user
+            if (!isEditing) {
+                const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+                if (!passwordRegex.test(formData.password)) {
+                    toast.error("Password must be at least 8 characters and include uppercase, lowercase, number, and special character");
+                    setIsLoading(false);
+                    return;
+                }
 
-            const response = await axios.post(`${API_URL}/api/products/auth/register`, userDetails, {
+                if (formData.password !== formData.confirmPassword) {
+                    toast.error("Passwords do not match");
+                    setIsLoading(false);
+                    return;
+                }
+            }
+
+            const response = await axios.post(`${API_URL}/api/products/auth/register`, formData, {
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 }
             });
 
-            toast.success(`User ${firstName} ${lastName} added successfully`);
+            toast.success(`User ${formData.firstName} ${formData.lastName} added successfully`);
             fetchEmployees();
-            event.target.reset();
             document.getElementById('create-new-product').checked = false;
+            setIsLoading(false);
         } catch (error) {
             console.error("Add employee error:", error);
             toast.error(error.response?.data?.message || "Failed to add user");
+            setIsLoading(false);
         }
     };
 
-    // Convert fetchEmployees to use axios
-    const fetchEmployees = async () => {
-        try {
-            const response = await axios.get(`${API_URL}/api/products/employees`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-
-            setEmployees(response.data);
-        } catch (error) {
-            console.error("Fetch employees error:", error);
-            toast.error("Failed to load users. Please check your connection.");
-        }
-    };
-
-    const [employees, setEmployees] = useState([]);
-    const [userCity, setUserCity] = useState('');
-    const [userStore, setUserStore] = useState('');
-
-    useEffect(() => {
-        const userString = localStorage.getItem('user');
-        if (userString) {
-            try {
-                const user = JSON.parse(userString);
-                setUserRole(user.role || 'employee');
-                setUserCity(user.city || '');
-                setUserStore(user.store_name || '');
-            } catch (error) {
-                console.error('Error parsing user data:', error);
-            }
-        }
-        fetchEmployees();
-    }, []);
-
-
-    const handleCancel = () => {
-        document.getElementById('create-new-product').checked = false;
-    };
-
-    const [isEditing, setIsEditing] = useState(false);
-    const [editingEmployee, setEditingEmployee] = useState(null);
-    const [selectedRole, setSelectedRole] = useState(editingEmployee?.role);
-
-
+    // Handle edit employee
     const handleEdit = (employee) => {
-        console.log("Editing employee:", employee);
         setEditingEmployee(employee);
         setIsEditing(true);
         document.getElementById('edit-employee').checked = true;
     };
 
-    const handleUpdate = async (event) => {
+    // Update employee with enhanced validation
+    const handleUpdate = async (event, formData) => {
         event.preventDefault();
+        setIsLoading(true);
+
         try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                toast.error("Authentication required. Please login again.");
+            // Additional validation check before submitting
+            if (userRole === 'admin') {
+                // Enforce admin restrictions
+                if (formData.city !== userCity) {
+                    toast.error("Admin can only update employees in their own city");
+                    setIsLoading(false);
+                    return;
+                }
+                if (formData.store_name !== userStore) {
+                    toast.error("Admin can only update employees in their own store");
+                    setIsLoading(false);
+                    return;
+                }
+                // Prevent admin from changing employee role
+                if (editingEmployee.role === 'employee' && formData.role !== 'employee') {
+                    toast.error("Admin cannot change employee role");
+                    setIsLoading(false);
+                    return;
+                }
+                // Prevent admin from editing other admins
+                if (editingEmployee.role === 'admin') {
+                    toast.error("Admin cannot edit other admin accounts");
+                    setIsLoading(false);
+                    return;
+                }
+            }
+
+            // Validate phone format
+            const phoneDigits = formData.phone.replace(/[-()\s]/g, '');
+            if (!/^\d{10}$/.test(phoneDigits)) {
+                toast.error("Phone number must be exactly 10 digits");
+                setIsLoading(false);
                 return;
             }
 
-            // Get values directly from the form instead of using the state
-            const formData = new FormData(event.target);
-            const updatedData = {
-                firstName: formData.get('firstName')?.trim(),
-                lastName: formData.get('lastName')?.trim(),
-                email: formData.get('email')?.trim(),
-                phone: formData.get('phone')?.trim(),
-                city: formData.get('city')?.trim(),
-                store_name: formData.get('store_name')?.trim(),
-                role: formData.get('role')
-            };
-
-            // Validate all required fields
-            if (!updatedData.firstName || !updatedData.lastName || !updatedData.email ||
-                !updatedData.phone || !updatedData.city || !updatedData.store_name || !updatedData.role) {
-                toast.error("All fields are required");
+            // Validate names contain only alphabets
+            const nameRegex = /^[A-Za-z\s]+$/;
+            if (!nameRegex.test(formData.firstName) || !nameRegex.test(formData.lastName)) {
+                toast.error("Names should contain only alphabets");
+                setIsLoading(false);
                 return;
             }
 
             const response = await axios.put(
                 `${API_URL}/api/update/employees/${editingEmployee._id}`,
-                updatedData,
+                formData,
                 {
                     headers: {
                         'Content-Type': 'application/json',
@@ -164,14 +189,13 @@ const Employees = () => {
                     }
                 }
             );
-            console.log("Update response:", response.data);
+
             if (response.data) {
                 toast.success("Employee updated successfully");
                 fetchEmployees();
-                document.getElementById('edit-employee').checked = false;
-                setEditingEmployee(null);
-                setIsEditing(false);
+                handleCancelEdit();
             }
+            setIsLoading(false);
         } catch (error) {
             console.error("Update error:", error);
             if (error.response?.status === 401) {
@@ -179,7 +203,13 @@ const Employees = () => {
             } else {
                 toast.error(error.response?.data?.message || "Failed to update employee");
             }
+            setIsLoading(false);
         }
+    };
+
+    // Cancel handlers
+    const handleCancel = () => {
+        document.getElementById('create-new-product').checked = false;
     };
 
     const handleCancelEdit = () => {
@@ -201,157 +231,50 @@ const Employees = () => {
                         <PrintButton key="print" />
                     ]}
                 />
+
+                {/* Add Employee Modal */}
                 <input type="checkbox" id="create-new-product" className="modal-toggle" />
-                <label htmlFor="create-new-product" className="modal cursor-pointer">
-                    <label className="modal-box lg:w-7/12 md:w-10/12 w-11/12 max-w-4xl relative">
-                        <ModalCloseButton modalId={'create-new-product'} />
-                        <ModalHeading modalHeading={'Add a new Employee'} />
-                        <form onSubmit={addEmployee} className='mx-auto'>
-                            <div className='grid grid-cols-2 md:grid-cols-2 lg:grid-cols-2 gap-x-4 gap-y-2 mb-2'>
-                                <Input title={'First Name'} name='firstName' isRequired='required' type='text' />
-                                <Input title={'Last Name'} name='lastName' isRequired='required' type='text' />
-                                <Input title={'Email'} name='email' isRequired='required' type='email' />
-                                <Input title={'Phone'} name='phone' isRequired='required' type='tel' />
-                                <Input title={'City'} name='city' isRequired='required' type='text' />
-                                <Input title={'Store Name'} name='store_name' isRequired='required' type='text' />
-                                <Input title={'Password'} name='password' isRequired='required' type='password' />
-                                <Input title={'Confirm Password'} name='confirmPassword' isRequired='required' type='password' />
-                                <div className="form-control">
-                                    <label className="label">
-                                        <span className="label-text">Role</span>
-                                    </label>
-                                    <select name="role" className="select select-bordered w-full" defaultValue="employee" required>
-                                        <option value="">Select Role</option>
-                                        <option value="admin">Admin</option>
-                                        <option value="employee">Employee</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div className="flex flex-col w-full lg:flex-row mt-4 place-content-center">
-                                <SaveButton extraClass='mt-4' />
-                                <CancelButton extraClass='lg:mt-4 md:mt-3 mt-2' onClick={handleCancel} type="button" />
-                            </div>
-                        </form>
-                    </label>
-                </label>
-            </div>
-            <table className="table table-zebra table-compact w-full">
-                <thead>{tableHead}</thead>
-                <tbody>
-                    {employees
-                        .filter(employee =>
-                            userRole === 'admin'  // Only apply filter for admins
-                                ? employee.city === userCity && employee.store_name === userStore 
-                                : true  // Show all for superadmin and other roles
-                        )
-                        .map((employee, index) => (
-                            <TableRow
-                                key={employee._id}
-                                tableRowsData={[
-                                    index + 1,
-                                    employee.firstName,
-                                    employee.lastName,
-                                    employee.email,
-                                    employee.phone || 'N/A',
-                                    employee.city || 'N/A',
-                                    employee.store_name || 'N/A',
-                                    employee.role,
-                                    <span className='flex items-center gap-x-1'>
-                                        {(userRole === 'superadmin' || (userRole === 'admin' && employee.role !== 'admin')) && (
-                                            <EditButton onClick={() => handleEdit(employee)} />
-                                        )}
-                                        <DeleteButton
-                                            deleteApiLink={`${API_URL}/api/products/employees/${employee._id}`}
-                                            name={`${employee.firstName} ${employee.lastName}`}
-                                        />
-                                    </span>,
-                                ]}
-                            />
-                        ))}
-                </tbody>
-            </table>
+                <div className="modal" role="dialog">
+                    <AddEmployeeModal 
+                        onSubmit={addEmployee}
+                        onCancel={() => document.getElementById('create-new-product').checked = false}
+                        userRole={userRole}
+                        userCity={userCity}
+                        userStore={userStore}
+                    />
+                </div>
 
-
-            <input type="checkbox" id="edit-employee" className="modal-toggle" />
-            <label htmlFor="edit-employee" className="modal cursor-pointer">
-                <label className="modal-box lg:w-7/12 md:w-10/12 w-11/12 max-w-4xl relative">
-                    <ModalCloseButton modalId={'edit-employee'} />
-                    <ModalHeading modalHeading={'Edit Employee'} />
+                {/* Edit Employee Modal */}
+                <input type="checkbox" id="edit-product" className="modal-toggle" />
+                <div className="modal" role="dialog">
                     {editingEmployee && (
-                        <form onSubmit={handleUpdate} className='mx-auto'>
-                            <div className='grid grid-cols-2 md:grid-cols-2 lg:grid-cols-2 gap-x-4 gap-y-2 mb-2'>
-                                <Input
-                                    title={'First Name'}
-                                    name='firstName'
-
-                                    type='text'
-                                    value={editingEmployee.firstName || ''}
-                                    onChange={(e) => setEditingEmployee({ ...editingEmployee, firstName: e.target.value })}
-                                />
-                                <Input
-                                    title={'Last Name'}
-                                    name='lastName'
-
-                                    type='text'
-                                    value={editingEmployee.lastName || ''}
-                                    onChange={(e) => setEditingEmployee({ ...editingEmployee, lastName: e.target.value })}
-                                />
-                                <Input
-                                    title={'Email'}
-                                    name='email'
-
-                                    type='email'
-                                    value={editingEmployee.email || ''}
-                                    onChange={(e) => setEditingEmployee({ ...editingEmployee, email: e.target.value })}
-                                />
-                                <Input
-                                    title={'Phone'}
-                                    name='phone'
-                                    isRequired='required'
-                                    type='tel'
-                                    value={editingEmployee.phone || ''}
-                                    onChange={(e) => setEditingEmployee({ ...editingEmployee, phone: e.target.value })}
-                                />
-                                <Input
-                                    title={'City'}
-                                    name='city'
-                                    isRequired='required'
-                                    type='text'
-                                    value={editingEmployee.city || ''}
-                                    onChange={(e) => setEditingEmployee({ ...editingEmployee, city: e.target.value })}
-                                />
-                                <Input
-                                    title={'Store Name'}
-                                    name='store_name'
-                                    isRequired='required'
-                                    type='text'
-                                    value={editingEmployee.store_name || ''}
-                                    onChange={(e) => setEditingEmployee({ ...editingEmployee, store_name: e.target.value })}
-                                />
-                                <div className="form-control">
-                                    <label className="label">
-                                        <span className="label-text">Role</span>
-                                    </label>
-                                    <select
-                                        name="role"
-                                        className="select select-bordered w-full"
-                                        value={editingEmployee?.role || ''}
-                                        onChange={(e) => setEditingEmployee({ ...editingEmployee, role: e.target.value })}
-                                    >
-                                        <option value="admin">Admin</option>
-                                        <option value="employee">Employee</option>
-                                    </select>
-
-                                </div>
-                            </div>
-                            <div className="flex flex-col w-full lg:flex-row mt-4 place-content-center">
-                                <SaveButton extraClass='mt-4' />
-                                <CancelButton extraClass='lg:mt-4 md:mt-3 mt-2' onClick={handleCancelEdit} type="button" />
-                            </div>
-                        </form>
+                        <EditEmployeeModal 
+                            employee={editingEmployee}
+                            onSubmit={handleUpdate}
+                            onCancel={handleCancelEdit}
+                            userRole={userRole}
+                            userCity={userCity}
+                            userStore={userStore}
+                        />
                     )}
-                </label>
-            </label>
+                </div>
+            </div>
+
+            {/* Employee Table */}
+            {isLoading ? (
+                <div className="flex justify-center items-center py-8">
+                    <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary"></div>
+                </div>
+            ) : (
+                <EmployeeTable
+                    employees={employees}
+                    userRole={userRole}
+                    userCity={userCity}
+                    userStore={userStore}
+                    onEdit={handleEdit}
+                    apiUrl={API_URL}
+                />
+            )}
         </section>
     );
 };

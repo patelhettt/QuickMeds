@@ -14,29 +14,39 @@ const Login = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [rememberMe, setRememberMe] = useState(false);
 
-    const handleLogin = async (event) => {
-        event.preventDefault();
-        
-        if (!email || !password) {
-            toast.error('Please fill in all fields');
-            return;
-        }
-
+    const handleLogin = async (e) => {
+        e.preventDefault();
         setIsLoading(true);
-
+        
         try {
-            const response = await axios.post("http://localhost:5000/api/products/auth/login", { email, password });
-
-            // Store token in local storage
-            localStorage.setItem("token", response.data.token);
-            localStorage.setItem("user", JSON.stringify(response.data.user));
-
-            toast.success(response.data.message || 'Login successful');
-            navigate('/dashboard');  // Redirect to dashboard after login
-        } catch (error) {
-            toast.error(error.response?.data?.message || "Invalid email or password");
-        } finally {
+            const response = await axios.post('http://localhost:5000/api/auth/login', {
+                email,
+                password
+            });
+            
+            const { token, user } = response.data;
+            
+            // Store token and user info
+            localStorage.setItem('token', token);
+            localStorage.setItem('user', JSON.stringify(user));
+            
+            toast.success('Login successful!');
             setIsLoading(false);
+            
+            // Redirect based on user role
+            if (user.role === 'employee') {
+                navigate('/employee-dashboard');
+            } else if (user.role === 'admin') {
+                navigate('/admin-dashboard');
+            } else if (user.role === 'superadmin') {
+                navigate('/dashboard');
+            } else {
+                // Default fallback
+                navigate('/dashboard');
+            }
+        } catch (error) {
+            setIsLoading(false);
+            toast.error(error.response?.data?.message || 'Login failed');
         }
     };
 

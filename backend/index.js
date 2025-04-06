@@ -3,18 +3,14 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const mongoose = require('mongoose');
 
-// Load environment variables
 dotenv.config();
 
-// Initialize Express app
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 
-// MongoDB Connection
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb+srv://hett:diptesh79@quickmeds.f6ryx.mongodb.net/products?retryWrites=true&w=majority";
 
 mongoose.connect(MONGODB_URI, {
@@ -24,8 +20,11 @@ mongoose.connect(MONGODB_URI, {
     .then(() => console.log("MongoDB Connected"))
     .catch(err => {
         console.error("MongoDB Connection Error:", err);
-        process.exit(1); // Terminate the process if the connection fails
+        process.exit(1); 
     });
+
+// Auth Routes
+app.use('/api/auth', require('./routes/api/auth/auth'));
 
 // Routes
 app.use('/api/products/auth', require('./routes/api/auth/auth'));
@@ -69,7 +68,6 @@ app.use('/api/suppliers/payments', require('./routes/api/suppliers/payments'));
 // Contact Us API Routes
 app.use('/api/contactUs', require('./routes/api/contactUs'));
 
-// Index Route
 app.get('/', (req, res) => {
     res.status(200).json({
         message: "Welcome to Inventory Management System Server",

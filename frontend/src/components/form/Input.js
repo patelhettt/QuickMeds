@@ -1,12 +1,23 @@
 import React from 'react';
 
-const Input = ({ title = 'Input Field', type = 'text', placeholder = 'Type Here', name, isRequired, value }) => {
+const Input = ({ title, name, isRequired, type, value, onChange, placeholder, disabled }) => {
     return (
-        <div>
+        <div className="form-control">
             <label className="label">
-                <span className="label-text">{title}</span>
+                <span className="label-text">
+                    {title} {isRequired && <span className="text-red-500">*</span>}
+                </span>
             </label>
-            <input type={type} placeholder={placeholder} className="input input-xs input-bordered w-full max-w-xs" name={name} required={isRequired} defaultValue={value} />
+            <input
+                type={type}
+                name={name}
+                className="input input-bordered"
+                value={value || ''}
+                onChange={onChange}
+                required={isRequired}
+                placeholder={placeholder || title}
+                disabled={disabled}
+            />
         </div>
     );
 };
