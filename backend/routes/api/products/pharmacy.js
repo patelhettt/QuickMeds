@@ -24,7 +24,9 @@ router.get('/', async (req, res) => {
             limit = 50, 
             search = '', 
             category = '',
-            sort = 'tradeName'
+            sort = 'tradeName',
+            approved = false,
+            inInventory = false
         } = req.query;
 
         // Build query
@@ -44,6 +46,11 @@ router.get('/', async (req, res) => {
         // Category filter
         if (category && category !== 'All') {
             query.category = category;
+        }
+
+        // Only include products with stock if inInventory is true
+        if (inInventory === 'true') {
+            query.stock = { $gt: 0 };
         }
 
         // Pagination setup
