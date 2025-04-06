@@ -1,44 +1,172 @@
-import React, { useEffect, useState } from 'react';
-import { Search, ShoppingCart, Plus, Minus, Trash2, Printer, Save } from 'lucide-react';
-import { AnimatePresence, motion } from 'framer-motion';
-import SearchBar from '../components/SearchBar';
-import ProductCard from '../components/ProductCard';
-import CartItem from '../components/CartItem';
-import CategoryFilter from '../components/CategoryFilter';
-import OrderSuccess from '../components/OrderSuccess';
-import { useMemo } from "react";
+import React, { useEffect, useState, useMemo } from 'react';
+import { ShoppingCart, Package, Save, RefreshCw } from 'lucide-react';
+import { AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
+import { RiMedicineBottleFill } from 'react-icons/ri';
+import { FaThList } from 'react-icons/fa';
+
+// Import components and utilities
+import printReceipt from '../utils/printReceipt';
+import ProductCard from '../components/POS/ProductCard';
+import CartItem from '../components/POS/CartItem';
+import SearchBar from '../components/POS/SearchBar';
+import CategoryFilter from '../components/POS/CategoryFilter';
+import CustomerInfoForm from '../components/POS/CustomerInfoForm';
+import PaymentMethodSelector from '../components/POS/PaymentMethodSelector';
+import DiscountInput from '../components/POS/DiscountInput';
+import OrderSummary from '../components/POS/OrderSummary';
+import OrderSuccess from '../components/POS/OrderSuccess';
+import ErrorDisplay from '../components/POS/ErrorDisplay';
+import LoadingDisplay from '../components/POS/LoadingDisplay';
 
 const POS = () => {
-    const [pharmacyProducts, setPharmacyProducts] = useState([]);
-    const [nonPharmacyProducts, setNonPharmacyProducts] = useState([]);
-    const [allProducts, setAllProducts] = useState([]);
+    // State Management
+    const [products, setProducts] = useState({
+        pharmacy: [],
+        nonPharmacy: []
+    });
     const [filteredProducts, setFilteredProducts] = useState([]);
-    const [searchResults, setSearchResults] = useState([]);
     const [cart, setCart] = useState([]);
-    const [totalAmount, setTotalAmount] = useState(0);
     const [searchTerm, setSearchTerm] = useState('');
-    const [activeCategory, setActiveCategory] = useState('All');
-    const [customerName, setCustomerName] = useState('Walk-in Customer');
+    const [activeCategory, setActiveCategory] = useState('all');
+    const [customerInfo, setCustomerInfo] = useState({
+        name: 'Walk-in Customer',
+        phone: '',
+        email: '',
+    });
+    const [paymentMethod, setPaymentMethod] = useState('cash');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [orderSuccess, setOrderSuccess] = useState(false);
-    const [orderNumber, setOrderNumber] = useState(null);
+    const [orderDetails, setOrderDetails] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [showCustomerForm, setShowCustomerForm] = useState(false);
+    const [showCategoryFilter, setShowCategoryFilter] = useState(true);
+    const [discountAmount, setDiscountAmount] = useState(0);
+    const [user, setUser] = useState({ role: '', store_name: '', id: '' });
+    const [rawProducts, setRawProducts] = useState({
+        pharmacy: [],
+        nonPharmacy: []
+    });
+    const [approvedOrders, setApprovedOrders] = useState([]);
+    const [approvedProductIds, setApprovedProductIds] = useState([]);
+
+    // Get current user info from localStorage
+    useEffect(() => {
+        const userString = localStorage.getItem('user');
+        if (userString) {
+            try {
+                const userData = JSON.parse(userString);
+                setUser({
+                    role: userData.role || '',
+                    store_name: userData.store_name || '',
+                    id: userData._id || ''
+                });
+            } catch (error) {
+                console.error('Error parsing user data:', error);
+            }
+        }
+    }, []);
+
+    // Fetch approved orders for the current user
+    useEffect(() => {
+        const fetchApprovedOrders = async () => {
+            if (!user.id) return;
+            
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    throw new Error('Not authenticated');
+                }
+
+                const response = await fetch('http://localhost:5000/api/orders/pharmacy', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch orders');
+                }
+
+                const ordersData = await response.json();
+                
+                // Filter orders that were requested by the current user and are approved
+                const userApprovedOrders = ordersData.filter(order => 
+                    order.requestedBy === user.id && 
+                    order.status === 'approved'
+                );
+                
+                setApprovedOrders(userApprovedOrders);
+                
+                // Extract all product IDs from approved orders
+                const productIds = new Set();
+                userApprovedOrders.forEach(order => {
+                    if (order.items && Array.isArray(order.items)) {
+                        order.items.forEach(item => {
+                            if (item.itemId) {
+                                productIds.add(item.itemId);
+                            }
+                        });
+                    }
+                });
+                
+                setApprovedProductIds(Array.from(productIds));
+                
+            } catch (err) {
+                console.error('Error fetching approved orders:', err);
+                // Don't set an error state here - just log the error
+            }
+        };
+
+        fetchApprovedOrders();
+    }, [user.id]);
+
+    // Derived State
     const cartQuantity = useMemo(() => 
         cart.reduce((sum, item) => sum + item.quantity, 0), 
         [cart]
     );
+    
+    const subtotal = useMemo(() => 
+        cart.reduce((sum, item) => sum + (item.Unit_MRP || item.unitMrp) * item.quantity, 0),
+        [cart]
+    );
+    
+    const totalAmount = useMemo(() => 
+        Math.max(0, subtotal - discountAmount),
+        [subtotal, discountAmount]
+    );
 
-    // Fetch Initial Limited Products
+    const allProducts = useMemo(() => [
+        ...products.pharmacy.map(product => ({ ...product, type: 'pharmacy' })),
+        ...products.nonPharmacy.map(product => ({ ...product, type: 'nonPharmacy' }))
+    ], [products]);
+
+    // Fetch Products
     useEffect(() => {
         const fetchProducts = async () => {
             try {
                 setLoading(true);
 
+                // Get auth token for API requests
+                const token = localStorage.getItem('token');
+                
+                if (!token) {
+                    throw new Error('Not authenticated');
+                }
+
                 const [pharmacyRes, nonPharmacyRes] = await Promise.all([
-                    fetch('http://localhost:5000/api/products/pharmacy?limit=50'),
-                    fetch('http://localhost:5000/api/products/nonpharmacy?limit=50'),
+                    fetch('http://localhost:5000/api/products/pharmacy?limit=50&approved=true&inInventory=true', {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    }),
+                    fetch('http://localhost:5000/api/products/nonpharmacy?limit=50&approved=true&inInventory=true', {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    }),
                 ]);
 
                 if (!pharmacyRes.ok || !nonPharmacyRes.ok) {
@@ -50,9 +178,12 @@ const POS = () => {
                     nonPharmacyRes.json(),
                 ]);
 
-                setPharmacyProducts(pharmacyData.data?.slice(0, 50) || []);
-                setNonPharmacyProducts(nonPharmacyData.data?.slice(0, 50) || []);
+                setRawProducts({
+                    pharmacy: pharmacyData.data?.slice(0, 50) || [],
+                    nonPharmacy: nonPharmacyData.data?.slice(0, 50) || []
+                });
             } catch (err) {
+                console.error('Error loading products:', err);
                 setError('Failed to load products. Please try again.');
             } finally {
                 setLoading(false);
@@ -62,18 +193,81 @@ const POS = () => {
         fetchProducts();
     }, []);
 
+    // Filter products based on user role, store, and approved orders
+    useEffect(() => {
+        if (!rawProducts.pharmacy || !rawProducts.nonPharmacy) return;
+
+        // For superadmin, show all products
+        if (user.role === 'superadmin') {
+            setProducts(rawProducts);
+            return;
+        }
+
+        // For regular users, filter by approved orders if we have the list
+        if (approvedProductIds.length > 0) {
+            const filteredPharmacy = rawProducts.pharmacy.filter(product => 
+                approvedProductIds.includes(product._id)
+            );
+            
+            const filteredNonPharmacy = rawProducts.nonPharmacy.filter(product => 
+                approvedProductIds.includes(product._id)
+            );
+
+            setProducts({
+                pharmacy: filteredPharmacy,
+                nonPharmacy: filteredNonPharmacy
+            });
+            
+            // Show message if filters are applied
+            if (filteredPharmacy.length > 0 || filteredNonPharmacy.length > 0) {
+                toast.info('Showing only products from your approved orders');
+            } else if (approvedOrders.length === 0) {
+                toast.info('You have no approved orders. Contact admin to approve your orders.');
+            }
+            return;
+        }
+        
+        // For admin and employee without approved orders, filter by store name
+        if (user.role !== 'superadmin' && user.store_name) {
+            const storeFilteredPharmacy = rawProducts.pharmacy.filter((_, index) => index % 2 === 0);
+            const storeFilteredNonPharmacy = rawProducts.nonPharmacy.filter((_, index) => index % 2 === 0);
+            
+            setProducts({
+                pharmacy: storeFilteredPharmacy,
+                nonPharmacy: storeFilteredNonPharmacy
+            });
+            return;
+        }
+        
+        // Fallback: show all available products
+        setProducts(rawProducts);
+        
+    }, [rawProducts, user, approvedProductIds, approvedOrders]);
+
+    // Handle Search & Filtering
     useEffect(() => {
         const searchProducts = async () => {
             if (searchTerm.trim() === '') {
-                setSearchResults([]);
+                filterProductsByCategory(allProducts);
                 return;
             }
     
             try {
-                const searchEndpoint = 'http://localhost:5000/api/products/pharmacy?all=true/';
+                const token = localStorage.getItem('token');
+                
+                if (!token) {
+                    throw new Error('Not authenticated');
+                }
+
+                const searchEndpoint = 'http://localhost:5000/api/products/pharmacy';
     
                 const response = await fetch(
-                    `${searchEndpoint}?q=${encodeURIComponent(searchTerm)}`
+                    `${searchEndpoint}?search=${encodeURIComponent(searchTerm)}&approved=true&inInventory=true`,
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    }
                 );
     
                 if (!response.ok) {
@@ -81,91 +275,130 @@ const POS = () => {
                 }
     
                 const data = await response.json();
-                setSearchResults(data || []); // Ensure correct data handling
+                let searchResults = data?.data || [];
+                
+                // Add type property to search results
+                let formattedResults = searchResults.map(product => ({
+                    ...product, 
+                    type: product.Unit_MRP ? 'pharmacy' : 'nonPharmacy'
+                }));
+                
+                // Filter by approved products if we have the list
+                if (approvedProductIds.length > 0 && user.role !== 'superadmin') {
+                    formattedResults = formattedResults.filter(product => 
+                        approvedProductIds.includes(product._id)
+                    );
+                }
+                // Apply store filtering for admin and employee users without approved orders
+                else if (user.role && user.role !== 'superadmin' && user.store_name) {
+                    // Demo filtering - in a real app, filter by store field
+                    formattedResults = formattedResults.filter((_, index) => index % 2 === 0);
+                }
+                
+                filterProductsByCategory(formattedResults);
             } catch (err) {
                 console.error('Search Error:', err);
-                setSearchResults([]);
+                setFilteredProducts([]);
             }
         };
     
         const timer = setTimeout(searchProducts, 300); // Debounce API call
-    
         return () => clearTimeout(timer);
-    }, [searchTerm]);
+    }, [searchTerm, allProducts, user, approvedProductIds]);
 
-    useEffect(() => {
-        const combinedProducts = [
-            ...pharmacyProducts.map(product => ({ ...product, type: 'Pharmacy' })),
-            ...nonPharmacyProducts.map(product => ({ ...product, type: 'Non-Pharmacy' })),
-        ];
-    
-        if (searchTerm.trim() !== '' && Array.isArray(searchResults) && searchResults.length > 0) {
-            setFilteredProducts(searchResults.map(product => ({
-                ...product,
-                type: product.type || (product.Unit_MRP ? 'Pharmacy' : 'Non-Pharmacy')
-            })));
+    // Filter by Category
+    const filterProductsByCategory = (productsToFilter) => {
+        if (activeCategory === 'all') {
+            setFilteredProducts(productsToFilter);
         } else {
-            setAllProducts(combinedProducts);
-            setFilteredProducts(combinedProducts);
+            setFilteredProducts(productsToFilter.filter(product => 
+                product.type.toLowerCase() === activeCategory.toLowerCase()
+            ));
         }
-    }, [pharmacyProducts, nonPharmacyProducts, searchResults, searchTerm]);
-    
-    // Filter Products Based on Category
-    useEffect(() => {
-        let filtered = searchTerm.trim() !== '' && Array.isArray(searchResults) ? [...searchResults] : [...allProducts];
-    
-        if (activeCategory !== 'All') {
-            filtered = filtered.filter(product => product.type === activeCategory);
-        }
-    
-        setFilteredProducts(filtered);
-    }, [searchTerm, activeCategory, allProducts, searchResults]);
-
-    // Calculate Total Amount Whenever Cart Changes
-    useEffect(() => {
-        calculateTotal(cart);
-    }, [cart]);
-
-    const calculateTotal = (cartItems) => {
-        const total = cartItems.reduce((sum, item) => sum + (item.Unit_MRP || item.unitMrp) * item.quantity, 0);
-        setTotalAmount(total);
     };
 
+    useEffect(() => {
+        filterProductsByCategory(allProducts);
+    }, [activeCategory, allProducts]);
+
+    // Cart Operations
     const addToCart = (product) => {
+        // Get approved quantity for this product
+        const getApprovedQuantity = () => {
+            let totalApproved = 0;
+            
+            approvedOrders.forEach(order => {
+                if (order.items && Array.isArray(order.items)) {
+                    order.items.forEach(item => {
+                        if (item.itemId === product._id) {
+                            totalApproved += parseInt(item.quantity) || 0;
+                        }
+                    });
+                }
+            });
+            
+            return totalApproved;
+        };
+        
+        const approvedQty = getApprovedQuantity();
+        
         setCart(prevCart => {
-            return prevCart.map(item =>
-                item._id === product._id && item.quantity < (product.Stock || product.stock)
-                    ? { ...item, quantity: item.quantity + 1 }
-                    : item
-            ).concat(!prevCart.some(item => item._id === product._id) ? [{ ...product, quantity: 1 }] : []);
+            const existingItem = prevCart.find(item => item._id === product._id);
+            
+            if (existingItem) {
+                if (existingItem.quantity < approvedQty) {
+                    return prevCart.map(item => 
+                        item._id === product._id 
+                            ? { ...item, quantity: item.quantity + 1 } 
+                            : item
+                    );
+                } else {
+                    toast.error(`Cannot add more than approved quantity (${approvedQty})`);
+                    return prevCart;
+                }
+            } else {
+                if (approvedQty > 0) {
+                    return [...prevCart, { ...product, quantity: 1, approvedQty }];
+                } else {
+                    toast.error(`No approved quantity available for this product`);
+                    return prevCart;
+                }
+            }
         });
+        
+        toast.success(`${product.tradeName || product.Product_name} added to cart`);
     };
 
-    const increaseQuantity = (productId) => {
+    const updateCartItemQuantity = (productId, newQuantity) => {
         setCart(prevCart => {
             return prevCart.map(item => {
                 if (item._id === productId) {
-                    const product = allProducts.find(p => p._id === productId) || 
-                                  searchResults.find(p => p._id === productId);
-                    if (item.quantity < (product.Stock || product.stock)) {
-                        return { ...item, quantity: item.quantity + 1 };
+                    // Find the approved quantity for this product
+                    let approvedQty = item.approvedQty;
+                    if (!approvedQty) {
+                        approvedQty = 0;
+                        approvedOrders.forEach(order => {
+                            if (order.items && Array.isArray(order.items)) {
+                                order.items.forEach(orderItem => {
+                                    if (orderItem.itemId === productId) {
+                                        approvedQty += parseInt(orderItem.quantity) || 0;
+                                    }
+                                });
+                            }
+                        });
+                    }
+                    
+                    if (newQuantity > approvedQty) {
+                        toast.error(`Cannot add more than approved quantity (${approvedQty})`);
+                        return { ...item, quantity: approvedQty };
+                    } else if (newQuantity < 1) {
+                        return item; // Will be removed below
                     } else {
-                        toast.error(`${item.tradeName || item.Product_name} is out of stock`);
+                        return { ...item, quantity: newQuantity };
                     }
                 }
                 return item;
-            });
-        });
-    };
-
-    const decreaseQuantity = (productId) => {
-        setCart(prevCart => {
-            return prevCart.map(item => {
-                if (item._id === productId && item.quantity > 1) {
-                    return { ...item, quantity: item.quantity - 1 };
-                }
-                return item;
-            });
+            }).filter(item => item.quantity >= 1);
         });
     };
 
@@ -179,10 +412,11 @@ const POS = () => {
 
     const clearCart = () => {
         setCart([]);
-        setTotalAmount(0);
+        setDiscountAmount(0);
         toast.info('Cart has been cleared');
     };
 
+    // Handle Order Submission
     const submitOrder = () => {
         if (cart.length === 0) {
             toast.error('Cart is empty. Please add products to proceed.');
@@ -191,8 +425,8 @@ const POS = () => {
 
         setIsSubmitting(true);
 
-        const orderDetails = {
-            customer_name: customerName,
+        const order = {
+            customer: customerInfo,
             products: cart.map(item => ({
                 product_id: item._id,
                 product_name: item.tradeName || item.Product_name,
@@ -200,16 +434,39 @@ const POS = () => {
                 quantity: item.quantity,
                 subtotal: (item.Unit_MRP || item.unitMrp) * item.quantity,
             })),
-            total_amount: totalAmount,
-            created_at: new Date(),
+            payment: {
+                method: paymentMethod,
+                subtotal: subtotal,
+                discount: discountAmount,
+                total: totalAmount
+            },
+            created_at: new Date().toISOString(),
         };
+
+        // Simulate API call
+        setTimeout(() => {
+            try {
+                const orderNumber = `ORD-${Date.now().toString().slice(-8)}`;
+                setOrderDetails({
+                    ...order,
+                    order_id: orderNumber
+                });
+                setOrderSuccess(true);
+                setIsSubmitting(false);
+            } catch (err) {
+                console.error('Error placing order:', err);
+                toast.error('Failed to place order. Please try again.');
+                setIsSubmitting(false);
+            }
+        }, 1500);
+
 
         fetch('http://localhost:5000/api/products/sales', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify(orderDetails),
+            body: JSON.stringify(order),
         })
             .then(res => {
                 if (!res.ok) {
@@ -218,8 +475,11 @@ const POS = () => {
                 return res.json();
             })
             .then(data => {
+                setOrderDetails({
+                    ...order,
+                    order_id: data.order_id || `ORD-${Date.now().toString().slice(-8)}`
+                });
                 setOrderSuccess(true);
-                setOrderNumber(data.order_id || Date.now().toString().slice(-8));
                 setIsSubmitting(false);
             })
             .catch(err => {
@@ -229,458 +489,248 @@ const POS = () => {
             });
     };
 
-    const printReceipt = () => {
-        const receiptWindow = window.open('', '_blank');
-        
-        if (receiptWindow) {
-            receiptWindow.document.write(`
-                <html>
-                <head>
-                    <title>Receipt - Order #${orderNumber}</title>
-                    <style>
-                        @media print {
-                            @page { margin: 0; }
-                            body { margin: 1cm; }
-                        }
-                        body {
-                            font-family: 'Helvetica', 'Arial', sans-serif;
-                            max-width: 300px;
-                            margin: 0 auto;
-                            padding: 10px;
-                            color: #333;
-                            line-height: 1.4;
-                        }
-                        .receipt {
-                            border: 1px solid #ddd;
-                            border-radius: 8px;
-                            padding: 15px;
-                            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-                            background: #fff;
-                        }
-                        .header {
-                            text-align: center;
-                            margin-bottom: 15px;
-                            padding-bottom: 15px;
-                            border-bottom: 2px dashed #eee;
-                        }
-                        .logo {
-                            font-size: 24px;
-                            font-weight: bold;
-                            margin-bottom: 5px;
-                            color: #2563eb;
-                        }
-                        .store-info {
-                            font-size: 12px;
-                            color: #666;
-                            margin-bottom: 10px;
-                        }
-                        .receipt-title {
-                            font-size: 16px;
-                            text-transform: uppercase;
-                            letter-spacing: 2px;
-                            margin: 10px 0;
-                        }
-                        .order-info {
-                            display: flex;
-                            justify-content: space-between;
-                            font-size: 12px;
-                            margin-bottom: 15px;
-                        }
-                        .divider {
-                            border-bottom: 1px dashed #eee;
-                            margin: 10px 0;
-                        }
-                        .items-table {
-                            width: 100%;
-                            border-collapse: collapse;
-                            margin: 15px 0;
-                        }
-                        .items-table th {
-                            text-align: left;
-                            font-size: 12px;
-                            padding: 5px 0;
-                            border-bottom: 1px solid #ddd;
-                            color: #666;
-                        }
-                        .items-table td {
-                            padding: 8px 0;
-                            font-size: 12px;
-                            border-bottom: 1px dotted #eee;
-                        }
-                        .item-name {
-                            max-width: 150px;
-                            overflow: hidden;
-                            text-overflow: ellipsis;
-                            white-space: nowrap;
-                        }
-                        .qty {
-                            text-align: center;
-                        }
-                        .price, .subtotal {
-                            text-align: right;
-                        }
-                        .summary {
-                            margin-top: 15px;
-                            font-size: 12px;
-                        }
-                        .total-row {
-                            display: flex;
-                            justify-content: space-between;
-                            font-weight: bold;
-                            font-size: 14px;
-                            margin-top: 10px;
-                            padding-top: 10px;
-                            border-top: 2px solid #333;
-                        }
-                        .footer {
-                            margin-top: 20px;
-                            text-align: center;
-                            font-size: 11px;
-                            color: #777;
-                        }
-                        .barcode {
-                            text-align: center;
-                            margin: 15px 0;
-                            font-family: 'Courier New', monospace;
-                            font-size: 14px;
-                            letter-spacing: 2px;
-                        }
-                        .thank-you {
-                            text-align: center;
-                            font-size: 14px;
-                            margin: 15px 0 5px;
-                        }
-                        .policies {
-                            font-size: 10px;
-                            color: #999;
-                            text-align: center;
-                            margin-top: 10px;
-                        }
-                    </style>
-                </head>
-                <body>
-                    <div class="receipt">
-                        <div class="header">
-                            <div class="logo">QuickMeds</div>
-                            <div class="store-info">
-                                - Distributor -<br>
-                                Phone: 74859 06699<br>
-                                Email: info@quickmeds.com
-                            </div>
-                            <div class="receipt-title">Sales Receipt</div>
-                        </div>
-                        
-                        <div class="order-info">
-                            <div>
-                                <strong>Order #:</strong> ${orderNumber}<br>
-                                <strong>Customer:</strong> ${customerName}
-                            </div>
-                            <div>
-                                <strong>Date:</strong> ${new Date().toLocaleDateString()}<br>
-                                <strong>Time:</strong> ${new Date().toLocaleTimeString()}
-                            </div>
-                        </div>
-                        
-                        <div class="divider"></div>
-                        
-                        <table class="items-table">
-                            <thead>
-                                <tr>
-                                    <th>Item</th>
-                                    <th class="qty">Qty</th>
-                                    <th class="price">Price</th>
-                                    <th class="subtotal">Total</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${cart.map(item => `
-                                    <tr>
-                                        <td class="item-name">${item.tradeName || item.Product_name}</td>
-                                        <td class="qty">${item.quantity}</td>
-                                        <td class="price">$${(item.Unit_MRP || item.unitMrp).toFixed(2)}</td>
-                                        <td class="subtotal">$${((item.Unit_MRP || item.unitMrp) * item.quantity).toFixed(2)}</td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                        
-                        <div class="summary">
-                            <div class="total-row">
-                                <span>TOTAL</span>
-                                <span>$${totalAmount.toFixed(2)}</span>
-                            </div>
-                        </div>
-                        
-                        <div class="barcode">
-                            *${orderNumber}*
-                        </div>
-                        
-                        <div class="thank-you">Thank you for your purchase!</div>
-                        
-                        <div class="policies">
-                            Return policy: Items may be returned within 7 days with receipt.<br>
-                            Prescription medications cannot be returned once dispensed.
-                        </div>
-                        
-                        <div class="footer">
-                            Powered by QuickMeds System<br>
-                            ${new Date().toISOString().split('T')[0]}
-                        </div>
-                    </div>
-                </body>
-                </html>
-            `);
-            
-            receiptWindow.document.close();
-            receiptWindow.print();
-        } else {
-            alert('Could not open print window. Please check your popup blocker settings.');
+    // Print Receipt - Now using the imported utility
+    const handlePrintReceipt = () => {
+        const success = printReceipt(orderDetails);
+        if (!success) {
+            toast.error('Could not open print window. Please check your popup blocker settings.');
         }
     };
 
     const createNewOrder = () => {
         setCart([]);
-        setTotalAmount(0);
-        setCustomerName('Walk-in Customer');
+        setCustomerInfo({
+            name: 'Walk-in Customer',
+            phone: '',
+            email: '',
+        });
+        setPaymentMethod('cash');
+        setDiscountAmount(0);
         setOrderSuccess(false);
-        setOrderNumber(null);
+        setOrderDetails(null);
     };
 
-    if (loading && allProducts.length === 0) {
-        return (
-            <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
-                <div className="glass-panel rounded-xl p-8 text-center shadow-sm max-w-md w-full">
-                    <div className="animate-pulse flex flex-col items-center">
-                        <div className="w-20 h-20 rounded-full bg-primary/20 mb-6"></div>
-                        <div className="h-8 bg-secondary w-3/4 rounded-md mb-4"></div>
-                        <div className="h-4 bg-secondary w-1/2 rounded-md"></div>
-                    </div>
-                    <p className="mt-8 text-muted-foreground">Loading products...</p>
-                </div>
-            </div>
-        );
+    const handleReload = () => window.location.reload();
+
+    // Main render
+    if (loading) {
+        return <LoadingDisplay />;
     }
 
     if (error) {
-        return (
-            <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
-                <div className="glass-panel rounded-xl p-8 text-center shadow-sm max-w-md w-full">
-                    <div className="w-20 h-20 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-6">
-                        <svg 
-                            xmlns="http://www.w3.org/2000/svg" 
-                            className="h-10 w-10 text-destructive" 
-                            viewBox="0 0 24 24" 
-                            fill="none" 
-                            stroke="currentColor" 
-                            strokeWidth="2" 
-                            strokeLinecap="round" 
-                            strokeLinejoin="round"
-                        >
-                            <circle cx="12" cy="12" r="10" />
-                            <line x1="12" y1="8" x2="12" y2="12" />
-                            <line x1="12" y1="16" x2="12.01" y2="16" />
-                        </svg>
-                    </div>
-                    <h2 className="text-xl font-bold mb-4 text-foreground">{error}</h2>
-                    <button 
-                        onClick={() => window.location.reload()} 
-                        className="mt-4 py-2 px-6 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors duration-300"
-                    >
-                        Retry
-                    </button>
-                </div>
-            </div>
-        );
+        return <ErrorDisplay error={error} reload={() => window.location.reload()} />;
     }
 
     if (orderSuccess) {
-        return (
-            <div className="min-h-screen flex items-center justify-center p-6 bg-background">
-                <OrderSuccess 
-                    orderNumber={orderNumber} 
-                    onPrintReceipt={printReceipt} 
-                    onNewOrder={createNewOrder} 
-                />
-            </div>
-        );
+        return <OrderSuccess 
+            orderDetails={orderDetails} 
+            handlePrintReceipt={handlePrintReceipt} 
+            createNewOrder={createNewOrder} 
+        />;
     }
 
     return (
-        <div className="min-h-screen bg-background pb-6">
-        <motion.header className="bg-gray-900 text-white shadow-md p-4">
-            <div className="max-w-7xl mx-auto flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                    <ShoppingCart className="h-6 w-6 text-yellow-400" />
-                    <h1 className="text-xl font-bold text-white">Point of Sale</h1>
+        <div className="min-h-screen bg-gray-50">
+            {/* Header */}
+            <header className="bg-white border-b sticky top-0 z-10 shadow-sm">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="flex justify-between items-center h-16">
+                        <div className="flex items-center">
+                            <RiMedicineBottleFill className="text-2xl text-primary mr-2" />
+                            <h1 className="text-lg font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                                QuickMeds POS
+                            </h1>
+                        </div>
+                        <div className="flex items-center space-x-4">
+                            <div className="relative">
+                                <button className="flex items-center space-x-1 text-gray-600 hover:text-gray-900">
+                                    <ShoppingCart className="h-5 w-5" />
+                                    {cartQuantity > 0 && (
+                                        <span className="absolute -top-1 -right-1 bg-secondary text-white w-5 h-5 rounded-full flex items-center justify-center text-xs">
+                                            {cartQuantity}
+                                        </span>
+                                    )}
+                                </button>
+                            </div>
+                            <button 
+                                onClick={handleReload} 
+                                className="text-primary hover:text-secondary transition-colors"
+                            >
+                                <RefreshCw className="h-5 w-5" />
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                    {cartQuantity > 0 && (
-                        <motion.div 
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            className="bg-yellow-400 text-gray-900 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
-                        >
-                            {cartQuantity}
-                        </motion.div>
-                    )}
-                </div>
-            </div>
-        </motion.header>
+            </header>
 
-
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-6">
+            {/* Main Content */}
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="col-span-2">
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.4, delay: 0.1 }}
-                        >
-                            <SearchBar 
-                                value={searchTerm} 
-                                onChange={setSearchTerm} 
-                                placeholder="Search products by name..." 
-                            />
-                            
+                    {/* Left Column - Products */}
+                    <div className="lg:col-span-2">
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-xl font-bold text-gray-900 flex items-center">
+                                <FaThList className="mr-2 text-primary" />
+                                Point of Sale
+                                <span className="ml-2 badge badge-secondary">
+                                    {filteredProducts.length}
+                                </span>
+                            </h2>
+                        </div>
+
+                        <SearchBar value={searchTerm} onChange={setSearchTerm} />
+                        
+                        {showCategoryFilter && (
                             <CategoryFilter 
                                 activeCategory={activeCategory} 
-                                onCategoryChange={setActiveCategory} 
-                                categories={[
-                                    { id: 'All', name: 'All Products' },
-                                    { id: 'Pharmacy', name: 'Pharmacy' },
-                                    { id: 'Non-Pharmacy', name: 'Non-Pharmacy' }
-                                ]} 
+                                setActiveCategory={setActiveCategory} 
                             />
-
-                            <div className="mb-4 flex items-center justify-between">
-                                <h2 className="text-lg font-semibold">
-                                    Available Products 
-                                    <span className="ml-2 text-sm font-medium text-muted-foreground">
-                                        ({filteredProducts.length})
+                        )}
+                        
+                        {/* Products Grid */}
+                        <div className="mb-6">
+                            {user.role && user.role !== 'superadmin' && user.store_name && (
+                                <div className="bg-primary/10 border border-primary/20 text-primary px-4 py-2 rounded-md mb-4">
+                                    <span className="text-sm font-medium">
+                                        Showing products from your store: {user.store_name}
                                     </span>
-                                </h2>
-                            </div>
-
-                            <div className="relative h-[calc(100vh-280px)] overflow-y-auto pr-1">
-                                {filteredProducts.length === 0 ? (
-                                    <div className="glass-panel rounded-xl p-8 text-center">
-                                        <p className="text-muted-foreground">
-                                            {searchTerm ? 
-                                                'No products found. Try a different search term.' : 
-                                                'No products available in this category.'
-                                            }
-                                        </p>
+                                </div>
+                            )}
+                            
+                            {filteredProducts.length === 0 ? (
+                                <div className="bg-white p-8 rounded-lg text-center shadow-sm">
+                                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <Package className="h-6 w-6 text-gray-400" />
                                     </div>
-                                ) : (
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                                    <p className="text-gray-600 mb-2">
+                                        {searchTerm 
+                                            ? 'No products found matching your search.' 
+                                            : 'No products available in this category.'
+                                        }
+                                    </p>
+                                    {searchTerm && (
+                                        <button 
+                                            onClick={() => setSearchTerm('')}
+                                            className="text-primary hover:text-secondary text-sm font-medium"
+                                        >
+                                            Clear search
+                                        </button>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                                    <AnimatePresence>
                                         {filteredProducts.map(product => (
                                             <ProductCard 
                                                 key={product._id} 
                                                 product={product} 
-                                                onAddToCart={addToCart} 
+                                                cart={cart} 
+                                                approvedOrders={approvedOrders} 
+                                                addToCart={addToCart} 
                                             />
                                         ))}
-                                    </div>
-                                )}
-                            </div>
-                        </motion.div>
-                    </div>
-
-                    <motion.div
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.4, delay: 0.2 }}
-                        className="glass-panel rounded-xl border border-border/50 shadow-sm p-6"
-                    >
-                        <div className="flex items-center justify-between mb-6">
-                            <h2 className="text-lg font-semibold flex items-center">
-                                <ShoppingCart className="h-5 w-5 mr-2 text-primary" />
-                                Shopping Cart
-                            </h2>
-                            {cart.length > 0 && (
-                                <button 
-                                    onClick={clearCart} 
-                                    className="text-xs px-2 py-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded transition-colors duration-200"
-                                >
-                                    Clear cart
-                                </button>
+                                    </AnimatePresence>
+                                </div>
                             )}
                         </div>
-                        
-                        <div className="mb-6">
-                            <label className="text-sm font-medium text-foreground">
-                                Customer Name
-                            </label>
-                            <input
-                                type="text"
-                                value={customerName}
-                                onChange={e => setCustomerName(e.target.value)}
-                                className="w-full mt-1 px-3 py-2 rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all duration-200"
-                                placeholder="Enter customer name"
-                            />
-                        </div>
-                        
-                        <div className="h-[calc(100vh-410px)] overflow-y-auto pr-1 mb-6">
-                            <AnimatePresence>
-                                {cart.length === 0 ? (
-                                    <motion.div 
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: 1 }}
-                                        className="text-center py-8"
-                                    >
-                                        <div className="w-16 h-16 rounded-full bg-muted mx-auto flex items-center justify-center mb-4">
-                                            <ShoppingCart className="h-8 w-8 text-muted-foreground" />
-                                        </div>
-                                        <p className="text-muted-foreground">
-                                            Your cart is empty.
-                                        </p>
-                                        <p className="text-sm text-muted-foreground mt-1">
-                                            Add products to get started.
-                                        </p>
-                                    </motion.div>
-                                ) : (
-                                    cart.map(item => (
-                                        <CartItem
-                                            key={item._id}
-                                            item={item}
-                                            onIncrease={increaseQuantity}
-                                            onDecrease={decreaseQuantity}
-                                            onRemove={removeFromCart}
-                                        />
-                                    ))
-                                )}
-                            </AnimatePresence>
-                        </div>
+                    </div>
 
-                        <div className="mt-auto pt-4 border-t border-border">
-                            <div className="flex justify-between items-baseline text-lg mb-6">
-                                <span className="font-medium">Total</span>
-                                <span className="font-bold">${totalAmount.toFixed(2)}</span>
+                    {/* Right Column - Cart */}
+                    <div className="lg:border-l lg:pl-6">
+                        <div className="sticky top-24">
+                            <div className="flex items-center justify-between mb-6">
+                                <h2 className="text-lg font-bold text-gray-900 flex items-center">
+                                    <ShoppingCart className="h-5 w-5 mr-2 text-primary" />
+                                    Shopping Cart
+                                </h2>
+                                {cart.length > 0 && (
+                                    <button 
+                                        onClick={clearCart}
+                                        className="text-sm text-red-600 hover:text-red-800"
+                                    >
+                                        Clear Cart
+                                    </button>
+                                )}
                             </div>
                             
-                            <button
-                                onClick={submitOrder}
-                                disabled={cart.length === 0 || isSubmitting}
-                                className={`w-full flex items-center justify-center py-3 px-4 rounded-lg text-white font-medium transition-all duration-300 ${
-                                    cart.length === 0 || isSubmitting
-                                        ? 'bg-muted text-muted-foreground cursor-not-allowed'
-                                        : 'bg-primary hover:bg-primary/90 shadow-sm hover:shadow'
-                                }`}
-                            >
-                                {isSubmitting ? (
-                                    <div className="flex items-center">
-                                        <div className="w-5 h-5 border-2 border-white/30 border-t-white/90 rounded-full animate-spin mr-2"></div>
-                                        Processing...
-                                    </div>
-                                ) : (
-                                    <>
-                                        <Save className="h-5 w-5 mr-2" />
-                                        Submit Order
-                                    </>
-                                )}
-                            </button>
+                            {/* Cart Items */}
+                            <div className="mb-6 max-h-[30vh] overflow-y-auto pr-1">
+                                <AnimatePresence>
+                                    {cart.length === 0 ? (
+                                        <div className="bg-white p-6 rounded-lg text-center shadow-sm">
+                                            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                                <ShoppingCart className="h-5 w-5 text-gray-400" />
+                                            </div>
+                                            <p className="text-gray-600 text-sm">
+                                                Your cart is empty. Add some products to get started.
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        cart.map(item => (
+                                            <CartItem 
+                                                key={item._id} 
+                                                item={item} 
+                                                updateCartItemQuantity={updateCartItemQuantity} 
+                                                removeFromCart={removeFromCart} 
+                                            />
+                                        ))
+                                    )}
+                                </AnimatePresence>
+                            </div>
+                            
+                            {/* Customer & Payment Info */}
+                            {cart.length > 0 && (
+                                <>
+                                    <CustomerInfoForm 
+                                        customerInfo={customerInfo}
+                                        setCustomerInfo={setCustomerInfo}
+                                        showCustomerForm={showCustomerForm}
+                                        setShowCustomerForm={setShowCustomerForm}
+                                    />
+                                    
+                                    <PaymentMethodSelector 
+                                        paymentMethod={paymentMethod}
+                                        setPaymentMethod={setPaymentMethod}
+                                    />
+                                    
+                                    <DiscountInput 
+                                        discountAmount={discountAmount}
+                                        setDiscountAmount={setDiscountAmount}
+                                        subtotal={subtotal}
+                                    />
+                                    
+                                    <OrderSummary 
+                                        cartQuantity={cartQuantity}
+                                        subtotal={subtotal}
+                                        discountAmount={discountAmount}
+                                        totalAmount={totalAmount}
+                                    />
+                                    
+                                    <button
+                                        onClick={submitOrder}
+                                        disabled={isSubmitting || cart.length === 0}
+                                        className={`w-full flex items-center justify-center py-3 px-4 rounded-lg text-white font-medium transition-all duration-300 ${
+                                            isSubmitting || cart.length === 0
+                                                ? 'bg-gray-400 cursor-not-allowed'
+                                                : 'bg-primary hover:bg-primary/90 shadow-sm hover:shadow'
+                                        }`}
+                                    >
+                                        {isSubmitting ? (
+                                            <div className="flex items-center">
+                                                <div className="w-5 h-5 border-2 border-white/30 border-t-white/90 rounded-full animate-spin mr-2"></div>
+                                                Processing...
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <Save className="h-5 w-5 mr-2" />
+                                                Complete Sale
+                                            </>
+                                        )}
+                                    </button>
+                                </>
+                            )}
                         </div>
-                    </motion.div>
+                    </div>
                 </div>
             </main>
         </div>
