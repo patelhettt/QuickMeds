@@ -19,13 +19,16 @@ const POSContent = () => {
         orderDetails,
         handlePrintReceipt,
         createNewOrder,
-        handleReload
+        handleReload,
+        isInitialized
     } = usePOSContext();
 
-    if (loading) {
+    // Show loading only during initial load
+    if (!isInitialized || loading) {
         return <LoadingDisplay />;
     }
 
+    // Show error only after initialization
     if (error) {
         return <ErrorDisplay error={error} reload={handleReload} />;
     }
@@ -47,8 +50,12 @@ const POSContent = () => {
             {/* Main Content */}
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <POSProductList />
-                    <POSCart />
+                    <div className="lg:col-span-2">
+                        <POSProductList />
+                    </div>
+                    <div className="lg:col-span-1 flex justify-center">
+                        <POSCart />
+                    </div>
                 </div>
             </main>
         </div>

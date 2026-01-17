@@ -12,11 +12,13 @@ import Register from './pages/Authentication/Register';
 import NotFound from './pages/NotFound';
 import About from './pages/About';
 import Contact from './pages/Contact';
+import Dashboard from './pages/Dashboard/Dashboard';
 import AdminDashboard from './pages/Dashboard/AdminDashboard';
 import EmployeeDashboard from './pages/Dashboard/EmployeeDashboard';
 import DashboardSummary from './pages/Dashboard/DashboardSummary';
 import Customers from './pages/Dashboard/Customers';
 import Employees from './pages/Dashboard/Employees';
+import Users from './pages/Dashboard/Users/Users';
 import Profile from './pages/User/Profile';
 import Settings from './pages/User/Settings';
 import TermsAndConditions from './pages/TermsAndConditions';
@@ -61,7 +63,7 @@ function App() {
         <Route path="settings" element={<Settings />} />
         
         {/* SuperAdmin Dashboard */}
-        <Route path="dashboard" element={<AdminDashboard />}>
+        <Route path="dashboard" element={<Dashboard />}>
           <Route index element={<DashboardSummary />} />
           <Route path='products/pharmacy' element={<PharmacyProducts />} />
           <Route path='products/non-pharmacy' element={<NonPharmacyProducts />} />
@@ -79,6 +81,7 @@ function App() {
           <Route path='setup/companies' element={<Companies />} />
           <Route path='returns/customers' element={<CustomersReturns />} />
           <Route path='returns/expires-or-damages' element={<ExpiresOrDamagesReturns />} />
+          <Route path='users' element={<Users />} />
           <Route path='employees' element={<Employees />} />
           <Route path='customers' element={<Customers />} />
           <Route path='suppliers/lists' element={<SuppliersList />} />
@@ -115,13 +118,23 @@ function App() {
         {/* Employee Dashboard */}
         <Route path="employee-dashboard" element={<EmployeeDashboard />}>
           <Route index element={<DashboardSummary />} />
+          <Route path="dashboard" element={<DashboardSummary />} />
+          <Route path="customers" element={<Customers />} />
+          <Route path="POS" element={<POS />} />
+          
+          {/* Inventory Routes */}
+          <Route path="inventory">
+            <Route path="pharmacy" element={<PharInventory />} />
+            <Route path="non-pharmacy" element={<AllProductsInventory />} />
+          </Route>
+
+          {/* Requested Items Routes */}
           <Route path='products/pharmacy' element={<PharmacyProducts />} />
           <Route path='products/non-pharmacy' element={<NonPharmacyProducts />} />
           <Route path='requested-items/pharmacy' element={<PharmacyItems />} />
           <Route path='requested-items/non-pharmacy' element={<NonPharmacyItems />} />
           <Route path='returns/customers' element={<CustomersReturns />} />
           <Route path='returns/expires-or-damages' element={<ExpiresOrDamagesReturns />} />
-          <Route path='customers' element={<Customers />} />
           <Route path='pos' element={<POS />} />
         </Route>
         

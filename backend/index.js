@@ -23,6 +23,11 @@ mongoose.connect(MONGODB_URI, {
         process.exit(1); 
     });
 
+
+
+//billing 
+app.use('/api/bill', require('./routes/api/bill'));
+
 // Auth Routes
 app.use('/api/auth', require('./routes/api/auth/auth'));
 
@@ -41,7 +46,7 @@ app.use('/api/requestedItems/pharmacy', require('./routes/api/requestedItems/pha
 app.use('/api/requestedItems/nonPharmacy', require('./routes/api/requestedItems/nonPharmacy'));
 
 // POS API Routes
-app.use('/api/products/sales', require('./routes/api/products/sales'));
+app.use('/api/sales', require('./routes/api/products/sales'));
 
 //Orders API Routes
 app.use('/api/orders/pharmacy', require('./routes/api/orders/pharmacy'));
@@ -67,6 +72,15 @@ app.use('/api/suppliers/payments', require('./routes/api/suppliers/payments'));
 
 // Contact Us API Routes
 app.use('/api/contactUs', require('./routes/api/contactUs'));
+
+// Customer API Route
+app.use('/api/customer', require('./routes/api/customers/customers'));
+
+// Sales API Route
+app.use('/api/sales', require('./routes/api/products/sales'));
+
+// Inventory API Route
+app.use('/api/inventory', require('./routes/api/inventory'));
 
 app.get('/', (req, res) => {
     res.status(200).json({

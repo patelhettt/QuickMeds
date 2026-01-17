@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { User, Pharmacy } = require('../models/Pharmacy');
+const { Pharmacy } = require('../models/Pharmacy');
 
 // Get total count of pharmacy products
 router.get('/count', async (req, res) => {
@@ -21,63 +21,39 @@ router.get('/', async (req, res) => {
     try {
         const { 
             page = 1, 
-            limit = 50, 
-            search = '', 
-            category = '',
-            sort = 'tradeName',
-            approved = false,
-            inInventory = false
+            limit = 10, 
+            search = ''
         } = req.query;
 
-        // Build query
+        // Build search query
         let query = {};
-        
-        // Search functionality
         if (search) {
             query = {
                 $or: [
                     { tradeName: { $regex: search, $options: 'i' } },
                     { genericName: { $regex: search, $options: 'i' } },
+                    { category: { $regex: search, $options: 'i' } },
                     { company: { $regex: search, $options: 'i' } }
                 ]
             };
         }
 
-        // Category filter
-        if (category && category !== 'All') {
-            query.category = category;
-        }
-
-        // Only include products with stock if inInventory is true
-        if (inInventory === 'true') {
-            query.stock = { $gt: 0 };
-        }
-
-        // Pagination setup
-        const parsedPage = parseInt(page);
-        const parsedLimit = parseInt(limit);
-        const skip = (parsedPage - 1) * parsedLimit;
-
         // Execute query with pagination
         const [products, total] = await Promise.all([
             Pharmacy.find(query)
-                .sort({ [sort]: 1 })
-                .skip(skip)
-                .limit(parsedLimit)
+                .sort({ tradeName: 1 })
+                .skip((page - 1) * limit)
+                .limit(limit)
                 .lean(),
             Pharmacy.countDocuments(query)
         ]);
 
-        // Add hasMore flag
-        const hasMore = total > skip + products.length;
-
         res.status(200).json({
             data: products,
-            currentPage: parsedPage,
-            totalPages: Math.ceil(total / parsedLimit),
+            currentPage: parseInt(page),
+            totalPages: Math.ceil(total / limit),
             totalItems: total,
-            hasMore,
-            itemsPerPage: parsedLimit
+            itemsPerPage: parseInt(limit)
         });
     } catch (error) {
         console.error('Error fetching pharmacy products:', error);
@@ -111,7 +87,7 @@ router.get('/companies', async (req, res) => {
 // Get all unique unit types
 router.get('/unitTypes', async (req, res) => {
     try {
-        const unitTypes = await Pharmacy.distinct('unitTp');
+        const unitTypes = await Pharmacy.distinct('unitType');
         res.status(200).json(unitTypes);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -134,27 +110,29 @@ router.get('/:id', async (req, res) => {
 // Add a new pharmacy product
 router.post('/', async (req, res) => {
     try {
-        const { tradeName, genericName, category, strength, company, stock, packType, packSize, packTp, unitTp, packMrp, unitMrp } = req.body;
+        const { 
+            tradeName, 
+            genericName, 
+            strength, 
+            category, 
+            company, 
+            unitType,
+            stock
+        } = req.body;
 
-        if (!tradeName || !genericName || !category || !company || !stock) {
+        // Validate required fields
+        if (!tradeName || !genericName || !strength || !category || !company || !unitType) {
             return res.status(400).json({ error: 'Missing required fields' });
         }
 
         const newProduct = new Pharmacy({
             tradeName,
             genericName,
-            category,
             strength,
+            category,
             company,
-            stock,
-            packType,
-            packSize,
-            packTp,
-            unitTp,
-            packMrp,
-            unitMrp,
-            addedBy: 'admin',
-            addedToDbAt: new Date(),
+            unitType,
+            stock: stock || 0
         });
 
         await newProduct.save();
@@ -167,9 +145,32 @@ router.post('/', async (req, res) => {
 // Update a pharmacy product
 router.put('/:id', async (req, res) => {
     try {
+        const { 
+            tradeName, 
+            genericName, 
+            strength, 
+            category, 
+            company, 
+            unitType,
+            stock
+        } = req.body;
+
+        // Validate required fields
+        if (!tradeName || !genericName || !strength || !category || !company || !unitType) {
+            return res.status(400).json({ error: 'Missing required fields' });
+        }
+
         const updatedProduct = await Pharmacy.findByIdAndUpdate(
             req.params.id,
-            req.body,
+            {
+                tradeName,
+                genericName,
+                strength,
+                category,
+                company,
+                unitType,
+                stock: stock || 0
+            },
             { new: true, runValidators: true }
         );
 
@@ -189,7 +190,7 @@ router.delete('/:id', async (req, res) => {
         if (!deletedProduct) {
             return res.status(404).json({ message: 'Product not found' });
         }
-        res.status(200).json({ message: 'Product deleted successfully', deletedProduct });
+        res.status(200).json({ message: 'Product deleted successfully' });
     } catch (error) {
         res.status(400).json({ error: error.message });
     }

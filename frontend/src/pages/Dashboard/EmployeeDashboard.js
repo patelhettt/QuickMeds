@@ -33,9 +33,9 @@ const EmployeeDashboard = () => {
             setIsAuthenticated(true);
             try {
                 const user = JSON.parse(userString);
-                if (user.role !== 'employee') {
+                if (user.role !== 'employee' ) {
                     // Redirect to appropriate dashboard based on role
-                    if (user.role === 'admin' || user.role === 'superadmin') {
+                    if (user.role.toLowerCase() === 'admin' || user.role.toLowerCase() === 'superadmin') {
                         navigate('/dashboard');
                     }
                 }
@@ -115,7 +115,7 @@ const EmployeeDashboard = () => {
                             } />
 
                         {/* Returns - visible to employees */}
-                        <DetailsComponent
+                       {/*  <DetailsComponent
                             icon={<TbTruckReturn className='text-lg' />}
                             name={'Returns'}
                             subMenus={
@@ -131,12 +131,30 @@ const EmployeeDashboard = () => {
                                         name={'Expires / Damages'} />
                                 ]
                             } />
-
+ */}
                         {/* Customers - visible to employees */}
                         <LinkComponents to={'customers'} icon={<FaUsers className='text-lg' />} name={'Customers'} />
 
                         {/* POS - visible to employees */}
                         <LinkComponents to={'POS'} icon={<FaThList className='text-lg' />} name={'POS'} />
+
+                        {/* Inventory - visible to employees */}
+                        <DetailsComponent
+                            icon={<RiProductHuntFill className='text-lg' />}
+                            name={'Inventory'}
+                            subMenus={
+                                [
+                                    <LinkComponents
+                                        to={'inventory/pharmacy'}
+                                        icon={<MdLocalPharmacy className='text-lg' />}
+                                        name={'Pharmacy'} />,
+
+/*                                     <LinkComponents
+                                        to={'inventory/non-pharmacy'}
+                                        icon={<RiProfileFill className='text-lg' />}
+                                        name={'Non Pharmacy'} />
+ */                                ]
+                            } />
                     </nav>
                     
                     <div className="px-4">

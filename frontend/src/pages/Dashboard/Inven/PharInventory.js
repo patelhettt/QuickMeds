@@ -143,31 +143,77 @@ const PharInventory = () => {
     };
     
     return (
-        <div className="space-y-6">
-            {/* Header with refresh button */}
-            <InventoryHeader onRefresh={handleRefresh} isLoading={isLoading} />
-            
-            {/* Error message */}
-            {error && (
-                <div className="bg-red-50 p-4 rounded-lg text-red-800 mb-4">
-                    <p className="font-semibold">Error loading inventory</p>
-                    <p>{error}</p>
-                    <button 
-                        className="mt-2 btn btn-sm btn-outline text-red-600 hover:bg-red-100"
-                        onClick={fetchInventoryItems}
-                    >
-                        Try Again
-                    </button>
+        <section className="p-4 sm:p-6 mt-16 sm:mt-20 mx-2 sm:mx-4">
+            <div className="space-y-4 sm:space-y-6 bg-white rounded-lg shadow-sm">
+                {/* Header Section */}
+                <div className="p-4 sm:p-6 border-b border-gray-200">
+                    <InventoryHeader 
+                        onRefresh={handleRefresh} 
+                        isLoading={isLoading} 
+                    />
                 </div>
-            )}
-            
-            {/* Inventory table */}
-            <InventoryTable 
-                approvedItems={approvedItems} 
-                isLoading={isLoading}
-                userRole={userRole}
-            />
-        </div>
+
+                {/* Store Information for non-superadmin users */}
+                {userRole !== 'superadmin' && userInfo?.store_name && (
+                    <div className="px-4 sm:px-6">
+                        <div className="bg-blue-50 p-3 sm:p-4 rounded-lg text-sm text-blue-700 flex items-center shadow-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span className="text-xs sm:text-sm">
+                                Viewing inventory for <strong className="font-medium">{userInfo.store_name}</strong>
+                                {userInfo.city && <span className="ml-1">(City: <span className="font-medium">{userInfo.city}</span>)</span>}
+                            </span>
+                        </div>
+                    </div>
+                )}
+                
+                {/* Error Message */}
+                {error && (
+                    <div className="px-4 sm:px-6">
+                        <div className="bg-red-50 p-3 sm:p-4 rounded-lg text-red-800 flex flex-col">
+                            <div className="flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <p className="text-sm sm:text-base font-semibold">Error loading inventory</p>
+                            </div>
+                            <p className="mt-2 text-xs sm:text-sm">{error}</p>
+                            <button 
+                                className="mt-3 btn btn-xs sm:btn-sm btn-outline text-red-600 hover:bg-red-100 self-start"
+                                onClick={fetchInventoryItems}
+                            >
+                                Try Again
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Main Content */}
+                <div className="px-4 sm:px-6 pb-4 sm:pb-6">
+                    <div className="bg-white rounded-lg overflow-x-auto border border-gray-200">
+                        <InventoryTable 
+                            approvedItems={approvedItems} 
+                            isLoading={isLoading}
+                            userRole={userRole}
+                        />
+                    </div>
+                </div>
+
+                {/* Empty State */}
+                {!isLoading && !error && approvedItems.length === 0 && (
+                    <div className="px-4 sm:px-6 pb-4 sm:pb-6">
+                        <div className="text-center py-6 sm:py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 sm:h-12 sm:w-12 mx-auto text-gray-400 mb-3 sm:mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                            </svg>
+                            <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-1">No Inventory Items</h3>
+                            <p className="text-xs sm:text-sm text-gray-500">No approved items found in your inventory.</p>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </section>
     );
 };
 

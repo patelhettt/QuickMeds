@@ -1,0 +1,41 @@
+Good [morning/afternoon], respected faculty members and judges.
+
+We are excited to present our project QuickMeds, a modern pharmacy product management system designed to streamline medicine inventory, simplify pharmacy operations, and enhance customer service.
+
+I’m Het Patel, and I’m joined by my teammates Siddhant Rathod and Rahul Parmar. Together, we’ve built QuickMeds using MERN stack— with a strong focus on performance, usability, and real-world relevance.
+
+The primary goal of QuickMeds is to provide pharmacy owners and staff with an efficient way to manage medicines, track stock levels, and process sales or updates — all through an intuitive web interface.
+
+It addresses common issues like manual errors, expired products, and inventory mismanagement — especially in small or medium-sized pharmacies that cannot afford expensive enterprise tools.
+
+On the backend, we’ve used Node.js with Express to build a RESTful API that handles CRUD operations — for example, adding new medicines, updating stock, deleting products, and retrieving all data.
+
+The database we chose is MongoDB, due to its flexibility in handling unstructured data and easy integration with Node.
+
+On the frontend, we designed a clean and responsive interface that allows users to interact seamlessly with the system, even without technical expertise.
+
+Some key features of QuickMeds include:
+
+    Add / Update / Delete medicines with full validation.
+
+    Search & Filter options for easy product lookup.
+
+    Stock alerts for low-quantity items.
+
+    A dashboard showing key stats like total products, expired items, and stock value.
+
+We’ve also included a dummy data JSON file to quickly populate the database for demo or testing purposes.
+
+During development, we faced several challenges — from ensuring smooth backend-frontend integration to handling MongoDB’s schema-less nature responsibly.
+
+We also learned how important version control is, especially when collaborating. Using Git, we managed to divide tasks, solve merge conflicts, and keep track of progress effectively.
+
+QuickMeds is deployed locally for now and its previous version is hosted on Render, and we’ve structured it in a way that allows easy cloud deployment using platforms like Render, Vercel, or Heroku.
+
+For future versions, we plan to:
+
+    Integrate barcode scanning, Notification handling, ...
+
+In conclusion, QuickMeds is not just a project, but a practical solution built with a real-world mindset. We are proud of what we’ve achieved and grateful for the learning experience this journey provided.
+
+Thank you for your time and attention. We now welcome any questions or feedback you may have.

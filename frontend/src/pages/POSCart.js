@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ShoppingBag, ShoppingBasket, Ban, X, CreditCard, Wallet, Banknote } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { usePOSContext } from './POSContext';
@@ -76,6 +76,7 @@ const POSCart = () => {
         loading,
         error,
         customerInfo,
+        setCustomerInfo,
         showCustomerForm,
         setShowCustomerForm,
         cartQuantity,
@@ -87,17 +88,37 @@ const POSCart = () => {
     } = usePOSContext();
 
     const hasItems = cart.length > 0;
+    const [errors, setErrors] = useState({});
+
+    // Validation function
+    const validateCustomer = () => {
+        const newErrors = {};
+        if (!customerInfo.name.trim()) newErrors.name = "Name is required";
+        if (!customerInfo.phone.trim()) newErrors.phone = "Phone is required";
+        return newErrors;
+    };
+
+    const handleProceedToPayment = () => {
+        const validationErrors = validateCustomer();
+        setErrors(validationErrors);
+        if (Object.keys(validationErrors).length > 0) return;
+        setShowCustomerForm(true);
+    };
 
     return (
-        <div className="lg:col-span-1 bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden h-[calc(100vh-2rem)] flex flex-col">
-            {/* Cart Header */}
-            <div className="p-4 border-b border-gray-200 bg-gray-50">
-                <div className="flex justify-between items-center">
-                    <h2 className="font-medium text-gray-800 flex items-center">
-                        <ShoppingBag className="h-5 w-5 mr-2 text-primary" />
+        <div className="w-full max-w-xl bg-white rounded-lg border border-gray-200 shadow-sm h-[calc(100vh-2rem)] flex flex-col ml-auto">
+            <div className="p-6">
+                <h2 className="text-2xl font-bold text-primary mb-6 flex items-center">
+                    <ShoppingBag className="h-7 w-7 mr-2" />
+                    Your Cart
+                </h2>
+                {/* Cart Header */}
+                <div className="flex justify-between items-center h-3/6">
+                    <h2 className="font-medium text-gray-800 flex items-center text-lg">
+                        <ShoppingBag className="h-6 w-6 mr-2 text-primary" />
                         Your Cart
                         {hasItems && (
-                            <span className="ml-2 badge badge-primary">
+                            <span className="ml-2 badge badge-primary text-sm">
                                 {cartQuantity}
                             </span>
                         )}
@@ -115,80 +136,82 @@ const POSCart = () => {
             </div>
 
             {/* Cart Content */}
-            <div className="flex-1 overflow-auto">
-                {!hasItems ? (
-                    <EmptyCart triggerRefresh={error ? handleReload : null} />
+            <div className="flex-1 min-h-[400px] overflow-y-auto p-4 space-y-4">
+                {hasItems ? (
+                    cart.map((item) => (
+                        <CartItem key={item._id} item={item} />
+                    ))
                 ) : (
-                    <div className="divide-y divide-gray-100">
-                        <AnimatePresence>
-                            {cart.map(item => (
-                                <CartItem key={item._id} item={item} />
-                            ))}
-                        </AnimatePresence>
+                    <div className="flex flex-col items-center justify-center h-64">
+                        <ShoppingBasket className="h-16 w-16 text-gray-300 mb-4" />
+                        <p className="text-xl text-gray-400 font-semibold">Your cart is empty</p>
                     </div>
                 )}
             </div>
 
-            {/* Customer Info */}
-            {hasItems && (
-                <div className="p-4 border-t border-gray-200 bg-gray-50">
-                    {showCustomerForm ? (
-                        <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            exit={{ opacity: 0, height: 0 }}
-                        >
-                            <div className="flex justify-between items-center mb-2">
-                                <h3 className="font-medium text-gray-800">Customer Details</h3>
-                                <button 
-                                    onClick={() => setShowCustomerForm(false)}
-                                    className="text-gray-400 hover:text-gray-600"
-                                >
-                                    <X className="h-4 w-4" />
-                                </button>
-                            </div>
-                            <CustomerForm />
-                        </motion.div>
-                    ) : (
-                        <div className="flex justify-between items-center">
-                            <div>
-                                <p className="text-sm font-medium text-gray-700">
-                                    {customerInfo.name}
-                                </p>
-                                {customerInfo.phone && (
-                                    <p className="text-xs text-gray-500">{customerInfo.phone}</p>
-                                )}
-                            </div>
-                            <button 
-                                onClick={() => setShowCustomerForm(true)}
-                                className="text-xs text-primary hover:text-primary/80"
-                            >
-                                Edit
-                            </button>
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {/* Order Summary and Checkout */}
-            {hasItems && (
-                <div className="p-4 border-t border-gray-200">
-                    {/* Payment Method Selector */}
-                    <PaymentOptions 
-                        paymentMethod={paymentMethod}
-                        setPaymentMethod={setPaymentMethod}
+            {/* Customer Details and Order Summary */}
+            <div className="border-t border-gray-200 p-4 bg-gray-50">
+                <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        value={customerInfo.name}
+                        onChange={e => setCustomerInfo({ ...customerInfo, name: e.target.value })}
+                        className={`w-full border-gray-200 rounded-md px-3 py-2 text-sm ${errors.name ? 'border-red-500' : ''}`}
+                        placeholder="Enter customer name"
+                        required
                     />
-                
-                    <OrderSummary 
-                        subtotal={subtotal} 
-                        total={totalAmount}
-                        onSubmit={submitOrder}
-                        isSubmitting={isSubmitting}
-                        disabled={loading}
-                        paymentMethod={paymentMethod}
+                    {errors.name && <div className="text-xs text-red-500 mt-1">{errors.name}</div>}
+                </div>
+                <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Phone <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                        type="tel"
+                        value={customerInfo.phone}
+                        onChange={e => setCustomerInfo({ ...customerInfo, phone: e.target.value })}
+                        className={`w-full border-gray-200 rounded-md px-3 py-2 text-sm ${errors.phone ? 'border-red-500' : ''}`}
+                        placeholder="Enter phone number"
+                        required
+                    />
+                    {errors.phone && <div className="text-xs text-red-500 mt-1">{errors.phone}</div>}
+                </div>
+                <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Email
+                    </label>
+                    <input
+                        type="email"
+                        value={customerInfo.email}
+                        onChange={e => setCustomerInfo({ ...customerInfo, email: e.target.value })}
+                        className="w-full border-gray-200 rounded-md px-3 py-2 text-sm"
+                        placeholder="Enter email (optional)"
                     />
                 </div>
-            )}
+                <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Address
+                    </label>
+                    <textarea
+                        value={customerInfo.address}
+                        onChange={e => setCustomerInfo({ ...customerInfo, address: e.target.value })}
+                        className="w-full border-gray-200 rounded-md px-3 py-2 text-sm"
+                        placeholder="Enter address (optional)"
+                        rows={2}
+                    />
+                </div>
+                {/* Order Summary */}
+                <OrderSummary
+                    subtotal={subtotal}
+                    total={totalAmount}
+                    onSubmit={submitOrder}
+                    isSubmitting={isSubmitting}
+                    disabled={!hasItems}
+                />
+            </div>
         </div>
     );
 };

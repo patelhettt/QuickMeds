@@ -177,7 +177,7 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// Approve a pharmacy order
+// Approve a pharmacy order (fully or partially)
 router.patch('/:id/approve', async (req, res) => {
   try {
     const id = req?.params?.id;
@@ -198,26 +198,51 @@ router.patch('/:id/approve', async (req, res) => {
         success: false 
       });
     }
+
+    // Get approved quantities from request body
+    const { approvedQuantities } = req.body;
+    const isPartialApproval = approvedQuantities && Object.keys(approvedQuantities).length > 0;
+    
+    // Update the order items with approved quantities
+    const updatedItems = order.items.map(item => {
+      if (isPartialApproval) {
+        const approvedQty = approvedQuantities[item.itemId];
+        return {
+          ...item,
+          approvedQuantity: approvedQty !== undefined ? approvedQty : 0,
+          originalQuantity: item.quantity,
+          quantity: approvedQty !== undefined ? approvedQty : 0
+        };
+      }
+      return {
+        ...item,
+        approvedQuantity: item.quantity,
+        originalQuantity: item.quantity
+      };
+    });
     
     // Update the order status
     const updateData = {
       $set: { 
         status: 'approved',
         approvedAt: new Date(),
-        approvedBy: req.body.approvedBy || 'admin'
+        approvedBy: req.body.approvedBy || 'admin',
+        items: updatedItems,
+        isPartialApproval,
+        partialApprovalNote: isPartialApproval ? (req.body.partialApprovalNote || 'Partial quantities approved') : undefined
       }
     };
     
     const result = await pharmacyOrdersCollection.updateOne(filter, updateData);
     
     if (result.modifiedCount === 1) {
-      // Now update the pharmacy stock for each item in the order
+      // Now update the pharmacy stock for each approved item
       const pharmacyCollection = client.db('products').collection('pharmacies');
       
       // Process each item in the order
-      if (order.items && order.items.length > 0) {
-        const updatePromises = order.items.map(async (item) => {
-          if (!item.itemId) return null;
+      if (updatedItems && updatedItems.length > 0) {
+        const updatePromises = updatedItems.map(async (item) => {
+          if (!item.itemId || item.quantity === 0) return null;
           
           try {
             // Find the product by ID
@@ -238,7 +263,7 @@ router.patch('/:id/approve', async (req, res) => {
               return null;
             }
 
-            const newStock = currentStock - orderQuantity; // Decreasing stock
+            const newStock = currentStock - orderQuantity;
             
             // Update the product stock
             return pharmacyCollection.updateOne(
@@ -256,7 +281,7 @@ router.patch('/:id/approve', async (req, res) => {
       }
       
       res.json({ 
-        message: 'Order approved successfully and stock updated',
+        message: isPartialApproval ? 'Order partially approved successfully' : 'Order approved successfully',
         success: true 
       });
     } else {
@@ -274,7 +299,6 @@ router.patch('/:id/approve', async (req, res) => {
     });
   }
 });
-
 
 // Reject a pharmacy order
 router.patch('/:id/reject', async (req, res) => {

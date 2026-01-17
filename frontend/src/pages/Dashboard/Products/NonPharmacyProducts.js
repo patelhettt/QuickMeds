@@ -16,6 +16,11 @@ import DeleteButton from '../../../components/buttons/DeleteButton';
 import { toast } from 'react-toastify';
 import DashboardPageHeading from '../../../components/headings/DashboardPageHeading';
 import AddModal from '../../../components/modals/AddModal';
+import SearchButton from '../../../components/buttons/SearchButton';
+import ProductNewButton from '../../../components/buttons/ProductNewButton';
+import ProductEditButton from '../../../components/buttons/ProductEditButton';
+import ProductCancelButton from '../../../components/buttons/ProductCancelButton';
+import { openModal, closeModal, useDashboardContext } from '../Dashboard';
 
 const API_BASE_URL = 'http://localhost:5000/api/products/nonPharmacy';
 
@@ -30,6 +35,11 @@ const NonPharmacyProducts = () => {
     const [totalPages, setTotalPages] = useState(0);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentProduct, setCurrentProduct] = useState(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [isSearching, setIsSearching] = useState(false);
+
+    // Get dashboard context if available
+    const dashboardContext = useDashboardContext();
 
     const handleOpenModal = () => {
         if (categories.length === 0 || companies.length === 0 || unitTypes.length === 0) {
@@ -39,10 +49,10 @@ const NonPharmacyProducts = () => {
         document.getElementById('create-new-product').checked = true;
     };
 
-
     const handleRefresh = () => {
         fetchProducts(currentPage, productsPerPage);
-    }; 
+    };
+
     const fetchDropdownData = async () => {
         try {
             const [categoriesRes, companiesRes, unitTypesRes] = await Promise.all([
@@ -86,21 +96,44 @@ const NonPharmacyProducts = () => {
         }
     };
 
-    // Update fetchProducts to use axios
     const fetchProducts = async (page = 1, limit = productsPerPage) => {
         try {
-            const response = await axios.get(`${API_BASE_URL}?page=${page}&limit=${limit}`);
+            // Get user information from context or localStorage
+            const user = dashboardContext?.userInfo || JSON.parse(localStorage.getItem('user'));
+            const storeId = user?.store_id;
+            const userRole = user?.role;
+            
+            // Build URL with query parameters
+            let url = `${API_BASE_URL}?page=${page}&limit=${limit}`;
+            
+            // Only filter by store if not a superadmin
+            if (userRole !== 'superadmin' && storeId) {
+                url += `&store=${storeId}`;
+                console.log('Filtering products by store:', storeId);
+            }
+            
+            const response = await axios.get(url);
             const data = response.data;
-            setNonPharmacyProducts(data.data);
-            setTotalProducts(data.totalItems);
-            setTotalPages(data.totalPages);
+            
+            // Check if we got data
+            if (data && Array.isArray(data.data)) {
+                setNonPharmacyProducts(data.data);
+                setTotalProducts(data.totalItems);
+                setTotalPages(data.totalPages);
+                
+                if (data.data.length === 0 && userRole !== 'superadmin') {
+                    toast.info(`No products found for your store. Contact an administrator if you need access to more products.`);
+                }
+            } else {
+                console.error('Invalid data format received:', data);
+                toast.error('Invalid data format received from the server');
+            }
         } catch (error) {
             console.error('Error fetching products:', error);
             toast.error(error.response?.data?.message || 'Failed to fetch products');
         }
     };
 
-    // Update handleOpenEditModal to use axios
     const handleOpenEditModal = async (productId) => {
         try {
             const response = await axios.get(`${API_BASE_URL}/${productId}`);
@@ -120,7 +153,6 @@ const NonPharmacyProducts = () => {
         }
     };
 
-    
     const addNonPharmacyProduct = async (event) => {
         event.preventDefault();
         const formData = new FormData(event.target);
@@ -156,7 +188,6 @@ const NonPharmacyProducts = () => {
         }
     };
 
-    // Update updateNonPharmacyProduct to use axios
     const updateNonPharmacyProduct = async (event) => {
         event.preventDefault();
         
@@ -196,6 +227,42 @@ const NonPharmacyProducts = () => {
         }
     };
 
+    const handleSearchToggle = () => {
+        setIsSearching(!isSearching);
+    };
+
+    const handleSearch = async (event) => {
+        event.preventDefault();
+        try {
+            // Get user information from context or localStorage
+            const user = dashboardContext?.userInfo || JSON.parse(localStorage.getItem('user'));
+            const storeId = user?.store_id;
+            const userRole = user?.role;
+            
+            // Build URL with query parameters
+            let url = `${API_BASE_URL}?search=${searchTerm}&page=1&limit=${productsPerPage}`;
+            
+            // Only filter by store if not a superadmin
+            if (userRole !== 'superadmin' && storeId) {
+                url += `&store=${storeId}`;
+            }
+            
+            const response = await axios.get(url);
+            const data = response.data;
+            
+            setNonPharmacyProducts(data.data);
+            setTotalProducts(data.totalItems);
+            setTotalPages(data.totalPages);
+            setCurrentPage(1);
+            setIsSearching(false);
+            
+            toast.success(`Found ${data.totalItems} products matching "${searchTerm}"`);
+        } catch (error) {
+            console.error('Error searching products:', error);
+            toast.error(error.response?.data?.message || 'Failed to search products');
+        }
+    };
+
     useEffect(() => {
         fetchProducts(currentPage, productsPerPage);
     }, [currentPage, productsPerPage]);
@@ -210,11 +277,50 @@ const NonPharmacyProducts = () => {
                 name='Non-Pharmacy Products'
                 value={totalProducts}
                 buttons={[
-                    <NewButton key="new-button" modalId='create-new-product' onClick={handleOpenModal} />,
+                    <ProductNewButton 
+                        key="new-button" 
+                        modalId='create-new-product' 
+                        fetchDropdownData={fetchDropdownData}
+                        dashboardContext={dashboardContext}
+                        openModal={openModal}
+                        btnSize="btn-sm"
+                        title="New Product"
+                    />,
+                    <SearchButton key="search-button" onClick={handleSearchToggle} />,
                     <RefreshButton key="refresh-button" onClick={handleRefresh} />,
                     <PrintButton key="print-button" />
                 ]}
             />
+            
+            {/* Search overlay/modal */}
+            {isSearching && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 z-40 flex items-center justify-center">
+                    <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+                        <h3 className="text-lg font-bold mb-4">Search Products</h3>
+                        <form onSubmit={handleSearch}>
+                            <div className="mb-4">
+                                <input
+                                    type="text"
+                                    placeholder="Enter product name, category, or company..."
+                                    className="input input-bordered w-full"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                            </div>
+                            <div className="flex justify-end gap-2">
+                                <button type="submit" className="btn btn-primary">Search</button>
+                                <button 
+                                    type="button" 
+                                    className="btn btn-outline"
+                                    onClick={handleSearchToggle}
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
 
             <input type="checkbox" id="create-new-product" className="modal-toggle" />
             <label htmlFor="create-new-product" className="modal cursor-pointer">
@@ -232,7 +338,12 @@ const NonPharmacyProducts = () => {
                         </div>
                         <div className="flex gap-2 mt-4">
                             <SaveButton extraClass={''} />
-                            <CancelButton modalId={'create-new-product'} />
+                            <ProductCancelButton 
+                                modalId='create-new-product'
+                                dashboardContext={dashboardContext}
+                                closeModal={closeModal}
+                                resetForm={() => document.getElementById('create-product-form')?.reset()}
+                            />
                         </div>
                     </form>
                 </label>
@@ -318,7 +429,13 @@ const NonPharmacyProducts = () => {
                             </div>
                             <div className="flex gap-2 mt-4">
                                 <SaveButton extraClass={''} />
-                                <CancelButton modalId={'edit-product'} />
+                                <ProductCancelButton 
+                                    modalId="edit-product"
+                                    setEditingProduct={setCurrentProduct}
+                                    setIsEditing={setIsModalOpen}
+                                    dashboardContext={dashboardContext}
+                                    closeModal={closeModal}
+                                />
                             </div>
                         </form>
                     )}
@@ -346,8 +463,12 @@ const NonPharmacyProducts = () => {
                                     product.stock || 0,
                                     // In the TableRow component, update the EditButton implementation
                                     <span className='flex items-center gap-x-1'>
-                                        <EditButton 
-                                            onClick={() => handleOpenEditModal(product._id)} 
+                                        <ProductEditButton 
+                                            product={product}
+                                            setEditingProduct={setCurrentProduct}
+                                            setIsEditing={setIsModalOpen}
+                                            dashboardContext={dashboardContext}
+                                            openModal={openModal}
                                         />
                                         <DeleteButton
                                             deleteApiLink={`${API_BASE_URL}/${product._id}`}

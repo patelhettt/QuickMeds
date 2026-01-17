@@ -5,6 +5,13 @@ import { FiDownload, FiRefreshCw, FiSearch, FiFilter, FiGrid } from 'react-icons
 // API URL
 const API_URL = 'http://localhost:5000/api';
 
+// Toast IDs to prevent duplicates
+const TOAST_IDS = {
+    LOAD_SUCCESS: 'load-products-success',
+    LOAD_ERROR: 'load-products-error',
+    REFRESH: 'refresh-products'
+};
+
 const formatStock = (stock) => {
     const stockNum = parseInt(stock) || 0;
     if (stockNum === 0) {
@@ -14,6 +21,16 @@ const formatStock = (stock) => {
     } else {
         return <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">{stockNum}</span>;
     }
+};
+
+// Format price to Indian Rupees
+const formatPrice = (price) => {
+    const numPrice = parseFloat(price) || 0;
+    return numPrice.toLocaleString('en-IN', {
+        maximumFractionDigits: 2,
+        style: 'currency',
+        currency: 'INR'
+    });
 };
 
 const AllProductsInventory = () => {
@@ -40,6 +57,27 @@ const AllProductsInventory = () => {
             console.error('Error loading user data from localStorage:', err);
         }
     }, []);
+    
+    // Show toast with ID to prevent duplicates
+    const showToast = (type, message, id) => {
+        // Clear any existing toasts with this ID
+        toast.dismiss(id);
+        
+        // Show the toast with the ID
+        switch (type) {
+            case 'success':
+                toast.success(message, { toastId: id });
+                break;
+            case 'error':
+                toast.error(message, { toastId: id });
+                break;
+            case 'info':
+                toast.info(message, { toastId: id });
+                break;
+            default:
+                toast.info(message, { toastId: id });
+        }
+    };
     
     // Fetch all products
     const fetchProducts = async () => {
@@ -85,7 +123,7 @@ const AllProductsInventory = () => {
                     category: product.category || product.Category || 'Pharmacy',
                     company: product.company || product.Company || 'Unknown',
                     stock: product.stock || Math.floor(Math.random() * 30), // Default random stock for demo
-                    price: product.Unit_MRP || 0,
+                    price: product.unitMrp || product.Unit_MRP || 0,
                     type: 'pharmacy'
                 })),
                 ...nonPharmaProducts.map(product => ({
@@ -95,7 +133,7 @@ const AllProductsInventory = () => {
                     category: product.category || product.Category || 'Non-Pharmacy',
                     company: product.company || product.Company || 'Unknown',
                     stock: product.stock || Math.floor(Math.random() * 30), // Default random stock for demo
-                    price: product.unitMrp || 0,
+                    price: product.unitMrp || product.Unit_MRP || 0,
                     type: 'nonpharmacy'
                 }))
             ];
@@ -109,12 +147,12 @@ const AllProductsInventory = () => {
             setProducts(allProducts);
             setFilteredProducts(allProducts);
             
-            toast.success(`Loaded ${allProducts.length} products`);
+            showToast('success', `Loaded ${allProducts.length} products`, TOAST_IDS.LOAD_SUCCESS);
             
         } catch (err) {
             console.error('Error fetching products:', err);
             setError(err.message);
-            toast.error(`Failed to load products: ${err.message}`);
+            showToast('error', `Failed to load products: ${err.message}`, TOAST_IDS.LOAD_ERROR);
         } finally {
             setIsLoading(false);
         }
@@ -122,7 +160,14 @@ const AllProductsInventory = () => {
     
     // Fetch products when component mounts
     useEffect(() => {
+        // Close any existing toasts before fetching
+        toast.dismiss();
         fetchProducts();
+        
+        // Clean up toasts when component unmounts
+        return () => {
+            toast.dismiss();
+        };
     }, []);
     
     // Filter products when search term or filters change
@@ -158,7 +203,9 @@ const AllProductsInventory = () => {
     
     // Handle refresh button click
     const handleRefresh = () => {
-        toast.info("Refreshing products...");
+        // Dismiss existing toasts first
+        toast.dismiss();
+        showToast('info', "Refreshing products...", TOAST_IDS.REFRESH);
         fetchProducts();
     };
     
@@ -312,7 +359,7 @@ const AllProductsInventory = () => {
                                         <td className="text-left">{product.company}</td>
                                         <td className="text-center">{formatStock(product.stock)}</td>
                                         <td className="text-right font-semibold">
-                                            ₹{parseFloat(product.price).toFixed(2)}
+                                            {formatPrice(product.price)}
                                         </td>
                                     </tr>
                                 ))}

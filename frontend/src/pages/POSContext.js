@@ -5,6 +5,35 @@ const POSContext = createContext();
 
 export const usePOSContext = () => useContext(POSContext);
 
+// Add this helper function before the POSProvider component
+const processOrdersToInventory = (orders) => {
+    const inventoryItems = [];
+
+    orders.forEach(order => {
+        if (order.items && Array.isArray(order.items)) {
+            order.items.forEach(item => {
+                const existingItem = inventoryItems.find(i => i.product_id === item.itemId);
+
+                if (existingItem) {
+                    // Add to existing quantity
+                    existingItem.quantity = (parseInt(existingItem.quantity) || 0) +
+                        (parseInt(item.quantity) || 0);
+                } else {
+                    // Add as new item
+                    inventoryItems.push({
+                        product_id: item.itemId,
+                        quantity: parseInt(item.quantity) || 0,
+                        store_name: order.store_name || order.storeName,
+                        created_at: order.createdAt || order.created_at
+                    });
+                }
+            });
+        }
+    });
+
+    return inventoryItems;
+};
+
 export const POSProvider = ({ children }) => {
     // State Management
     const [products, setProducts] = useState({
@@ -16,7 +45,7 @@ export const POSProvider = ({ children }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [activeCategory, setActiveCategory] = useState('all');
     const [customerInfo, setCustomerInfo] = useState({
-        name: 'Walk-in Customer',
+        name: 'Customer',
         phone: '',
         email: '',
     });
@@ -30,22 +59,38 @@ export const POSProvider = ({ children }) => {
     const [showCategoryFilter, setShowCategoryFilter] = useState(true);
     const [user, setUser] = useState({ role: '', store_name: '', id: '' });
     const [storeInventory, setStoreInventory] = useState([]);
+    const [discount, setDiscount] = useState(0);
 
-    // Get current user info from localStorage
+    // Add new state for initialization
+    const [isInitialized, setIsInitialized] = useState(false);
+
+    // Modify the user effect to handle initialization
     useEffect(() => {
-        const userString = localStorage.getItem('user');
-        if (userString) {
-            try {
-                const userData = JSON.parse(userString);
-                setUser({
-                    role: userData.role || '',
-                    store_name: userData.store_name || '',
-                    id: userData._id || ''
-                });
-            } catch (error) {
-                console.error('Error parsing user data:', error);
+        const initializeUser = async () => {
+            const userString = localStorage.getItem('user');
+            if (userString) {
+                try {
+                    const userData = JSON.parse(userString);
+                    setUser({
+                        role: userData.role || '',
+                        store_name: userData.store_name || '',
+                        id: userData._id || ''
+                    });
+
+                    // Only set error if we're initialized and there's no store name
+                    if (!userData.store_name) {
+                        setError("Your account is not linked to a store. Please contact admin.");
+                    }
+                } catch (error) {
+                    console.error('Error parsing user data:', error);
+                    setError("Invalid user data. Please login again.");
+                }
+            } else {
+                setError("Please login to access POS.");
             }
-        }
+        };
+
+        initializeUser();
     }, []);
 
     // Derived State
@@ -55,38 +100,46 @@ export const POSProvider = ({ children }) => {
     );
 
     const subtotal = useMemo(() =>
-        cart.reduce((sum, item) => sum + (item.Unit_MRP || item.unitMrp) * item.quantity, 0),
+        cart.reduce((sum, item) => {
+            const price = item.Unit_MRP || item.unitMrp || 0;
+            const itemDiscount = item.discount || 0;
+            const discountedPrice = price * (1 - itemDiscount / 100);
+            return sum + discountedPrice * item.quantity;
+        }, 0),
         [cart]
     );
 
-    // No discount, total is same as subtotal
-    const totalAmount = subtotal;
+    // Modify the totalAmount calculation to include discount
+    const totalAmount = useMemo(() => {
+        const discountAmount = (subtotal * discount) / 100;
+        return subtotal - discountAmount;
+    }, [subtotal, discount]);
 
     const allProducts = useMemo(() => [
         ...products.pharmacy.map(product => ({ ...product, type: 'pharmacy' })),
         ...products.nonPharmacy.map(product => ({ ...product, type: 'nonPharmacy' }))
     ], [products]);
 
-    // Fetch Store Inventory
+    // Modify the store inventory effect
     useEffect(() => {
         const fetchStoreInventory = async () => {
             if (!user.store_name) {
-                console.log("No store name found in user profile");
-                setError("Your account is not linked to a store. Please contact admin.");
+                // Don't set error here, just return
                 setLoading(false);
                 return;
             }
-            
+
             console.log(`Fetching inventory for store: ${user.store_name}`);
             setLoading(true);
-            
+            setError(null); // Clear any previous errors
+
             try {
                 const token = localStorage.getItem('token');
                 if (!token) {
                     throw new Error('Not authenticated');
                 }
 
-                // First try store-specific endpoint (ideal case)
+                // First try store-specific endpoint
                 console.log(`Attempting store-specific inventory endpoint for ${user.store_name}`);
                 let response = await fetch(`http://localhost:5000/api/inventory/store/${encodeURIComponent(user.store_name)}`, {
                     headers: {
@@ -95,105 +148,66 @@ export const POSProvider = ({ children }) => {
                 });
 
                 if (!response.ok) {
-                    // If that fails, try the pharmacy orders endpoint and filter for the store
-                    console.log(`Store-specific endpoint failed, trying orders endpoint`);
+                    // Try fallback endpoint
                     response = await fetch(`http://localhost:5000/api/orders/pharmacy`, {
                         headers: {
                             'Authorization': `Bearer ${token}`
                         }
                     });
-                    
+
                     if (!response.ok) {
                         throw new Error(`Failed to fetch inventory (Status: ${response.status})`);
                     }
-                    
+
                     const ordersData = await response.json();
-                    console.log(`Received ${ordersData.length} orders, filtering for ${user.store_name}`);
-                    
-                    // Filter for this store and approved status
+
+                    // Process orders data
                     const storeOrders = ordersData.filter(order => {
                         const orderStore = order.store_name || order.storeName;
-                        return orderStore === user.store_name && 
-                               order.status === 'approved';
+                        return orderStore === user.store_name && order.status === 'approved';
                     });
-                    
-                    console.log(`Found ${storeOrders.length} approved orders for ${user.store_name}`);
-                    
-                    // Extract inventory items from these orders
-                    const inventoryItems = [];
-                    storeOrders.forEach(order => {
-                        if (order.items && Array.isArray(order.items)) {
-                            order.items.forEach(item => {
-                                const existingItem = inventoryItems.find(i => i.product_id === item.itemId);
-                                
-                                if (existingItem) {
-                                    // Add to existing quantity
-                                    existingItem.quantity = (parseInt(existingItem.quantity) || 0) + 
-                                                          (parseInt(item.quantity) || 0);
-                                } else {
-                                    // Add as new item
-                                    inventoryItems.push({
-                                        product_id: item.itemId,
-                                        quantity: parseInt(item.quantity) || 0,
-                                        store_name: user.store_name,
-                                        created_at: order.createdAt || order.created_at
-                                    });
-                                }
-                            });
-                        }
-                    });
-                    
+
+                    // Extract and process inventory items
+                    const inventoryItems = processOrdersToInventory(storeOrders);
                     setStoreInventory(inventoryItems);
-                    console.log(`Extracted ${inventoryItems.length} inventory items from orders`);
-                    
-                    if (inventoryItems.length > 0) {
-                        toast.success(`Found ${inventoryItems.length} products for ${user.store_name}`);
-                    } else {
-                        toast.info(`No approved products found for ${user.store_name}`);
+
+                    if (inventoryItems.length === 0) {
+                        setError(`No approved products found for ${user.store_name}`);
                     }
-                    
-                    return; // Skip the rest of the function
+                } else {
+                    // Handle successful store inventory response
+                    const inventoryData = await response.json();
+                    const inventoryItems = inventoryData.data || [];
+
+                    const storeItems = inventoryItems.filter(item =>
+                        item.store_name === user.store_name ||
+                        item.storeName === user.store_name
+                    );
+
+                    setStoreInventory(storeItems);
+
+                    if (storeItems.length === 0) {
+                        setError(`No inventory items found for ${user.store_name}`);
+                    }
                 }
 
-                // Handle successful store inventory response
-                const inventoryData = await response.json();
-                const inventoryItems = inventoryData.data || [];
-                
-                // Ensure filtering by store name in case API returns multiple stores
-                const storeItems = inventoryItems.filter(item => 
-                    item.store_name === user.store_name || 
-                    item.storeName === user.store_name
-                );
-                
-                setStoreInventory(storeItems);
-                
-                console.log(`Loaded ${storeItems.length} inventory items for ${user.store_name}`);
-                
-                if (storeItems.length > 0) {
-                    toast.success(`Loaded ${storeItems.length} products for ${user.store_name}`);
-                } else {
-                    toast.info(`No inventory items found for ${user.store_name}`);
-                }
-                
             } catch (err) {
                 console.error('Error fetching store inventory:', err);
-                toast.error(`Inventory error: ${err.message}`);
-                setError(`Failed to load inventory for ${user.store_name}. Using product catalog instead.`);
-                
-                // Set empty inventory to fall back to raw products
-                setStoreInventory([]);
+                setError(`Failed to load inventory for ${user.store_name}`);
             } finally {
                 setLoading(false);
+                setIsInitialized(true);
             }
         };
 
         if (user.store_name) {
             fetchStoreInventory();
-        } else {
+        } else if (isInitialized) {
+            // Only show error if we're initialized and still don't have a store name
             setError("Store not found in your profile. Please contact admin.");
             setLoading(false);
         }
-    }, [user.store_name]);
+    }, [user.store_name, isInitialized]);
 
     // Fetch Products
     useEffect(() => {
@@ -282,23 +296,23 @@ export const POSProvider = ({ children }) => {
             }
 
             console.log(`Processing ${storeInventory.length} inventory items for ${user.store_name}`);
-            
+
             // Create inventory items with product details
             const pharmacyItems = [];
             const nonPharmacyItems = [];
             let missingProducts = 0;
-            
+
             storeInventory.forEach(item => {
                 // Find product details - first in pharmacy
                 let product = pharProducts.find(p => p._id === item.product_id);
                 let type = 'pharmacy';
-                
+
                 // If not found in pharmacy, look in non-pharmacy
                 if (!product) {
                     product = nonPharProducts.find(p => p._id === item.product_id);
                     type = 'nonPharmacy';
                 }
-                
+
                 if (product) {
                     // Add inventory details to product
                     const inventoryProduct = {
@@ -307,7 +321,7 @@ export const POSProvider = ({ children }) => {
                         addedAt: item.created_at || new Date().toISOString(),
                         store_name: user.store_name
                     };
-                    
+
                     // Add to appropriate array
                     if (type === 'pharmacy') {
                         pharmacyItems.push(inventoryProduct);
@@ -318,24 +332,24 @@ export const POSProvider = ({ children }) => {
                     missingProducts++;
                 }
             });
-            
+
             if (missingProducts > 0) {
                 console.warn(`${missingProducts} inventory items could not be matched with products`);
             }
-            
+
             // Update the products state with the processed inventory items
             setProducts({
                 pharmacy: pharmacyItems,
                 nonPharmacy: nonPharmacyItems
             });
-            
+
             console.log(`Processed ${pharmacyItems.length} pharmacy and ${nonPharmacyItems.length} non-pharmacy items for ${user.store_name}`);
-            
+
             // If we have very few products, show a warning
             if (pharmacyItems.length + nonPharmacyItems.length < 3) {
                 toast.warning(`Only ${pharmacyItems.length + nonPharmacyItems.length} products found for ${user.store_name}`);
             }
-            
+
         } catch (err) {
             console.error('Error processing inventory items:', err);
             setError('Failed to process inventory items for your store.');
@@ -437,7 +451,6 @@ export const POSProvider = ({ children }) => {
 
     // Cart Operations
     const addToCart = (product) => {
-        // Check product stock
         const stock = parseInt(product.stock || 0);
 
         setCart(prevCart => {
@@ -456,7 +469,7 @@ export const POSProvider = ({ children }) => {
                 }
             } else {
                 if (stock > 0) {
-                    return [...prevCart, { ...product, quantity: 1 }];
+                    return [...prevCart, { ...product, quantity: 1, discount: 0 }];
                 } else {
                     toast.error(`Product is out of stock`);
                     return prevCart;
@@ -502,7 +515,7 @@ export const POSProvider = ({ children }) => {
     };
 
     // Handle Order Submission
-    const submitOrder = () => {
+    const submitOrder = async () => {
         if (cart.length === 0) {
             toast.error('Cart is empty. Please add products to proceed.');
             return;
@@ -510,67 +523,108 @@ export const POSProvider = ({ children }) => {
 
         setIsSubmitting(true);
 
-        const order = {
-            customer: customerInfo,
-            products: cart.map(item => ({
-                product_id: item._id,
-                product_name: item.tradeName || item.Product_name,
-                price: item.Unit_MRP || item.unitMrp,
-                quantity: item.quantity,
-                subtotal: (item.Unit_MRP || item.unitMrp) * item.quantity,
-            })),
-            payment: {
-                method: paymentMethod,
-                subtotal: subtotal,
-                total: totalAmount
-            },
-            created_at: new Date().toISOString(),
-            store_name: user.store_name,
-        };
+        try {
+            // 1. Find or create customer
+            const customerPayload = {
+                name: customerInfo.name || `Customer_${new Date().toISOString().slice(0,10)}`,
+                phone: customerInfo.phone || `unknown_${Date.now()}`,
+                email: customerInfo.email || '',
+                address: customerInfo.address || '',
+                store: user.store_name,
+                createdBy: user.id
+            };
 
-        // Simulate API call
-        setTimeout(() => {
-            try {
-                const orderNumber = `ORD-${Date.now().toString().slice(-8)}`;
-                setOrderDetails({
-                    ...order,
-                    order_id: orderNumber
-                });
-                setOrderSuccess(true);
-                setIsSubmitting(false);
-            } catch (err) {
-                console.error('Error placing order:', err);
-                toast.error('Failed to place order. Please try again.');
-                setIsSubmitting(false);
-            }
-        }, 1500);
+            console.log('Finding or creating customer:', customerPayload);
 
-        fetch('http://localhost:5000/api/products/sales', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(order),
-        })
-            .then(res => {
-                if (!res.ok) {
-                    throw new Error('Failed to submit order');
-                }
-                return res.json();
-            })
-            .then(data => {
-                setOrderDetails({
-                    ...order,
-                    order_id: data.order_id || `ORD-${Date.now().toString().slice(-8)}`
-                });
-                setOrderSuccess(true);
-                setIsSubmitting(false);
-            })
-            .catch(err => {
-                console.error('Error placing order:', err);
-                toast.error('Failed to place order. Please try again.');
-                setIsSubmitting(false);
+            const customerRes = await fetch('http://localhost:5000/api/customer', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(customerPayload),
             });
+
+            if (!customerRes.ok) {
+                console.error('Customer API error:', await customerRes.text());
+                throw new Error('Failed to process customer data');
+            }
+
+            const customerData = await customerRes.json();
+            console.log('Customer found/created:', customerData);
+
+            // 2. Process sales data with reference to customer
+            const salesItems = cart.map(item => ({
+                productId: item._id,
+                name: item.tradeName || item.Product_name,
+                quantity: item.quantity,
+                price: item.Unit_MRP || item.unitMrp,
+                discount: item.discount || 0,
+                total: (item.Unit_MRP || item.unitMrp) * item.quantity * (1 - (item.discount || 0) / 100),
+                type: item.type || 'pharmacy' // Default to pharmacy if type is missing
+            }));
+            
+            const salesPayload = {
+                customer: customerData._id,
+                items: salesItems,
+                payment: {
+                    method: paymentMethod,
+                    subtotal: subtotal,
+                    discount: discount,
+                    total: totalAmount
+                },
+                store_name: user.store_name,
+                soldBy: user.id,
+                created_at: new Date().toISOString()
+            };
+
+            console.log('Creating sale with items:', salesItems.length);
+
+            const salesRes = await fetch('http://localhost:5000/api/sales', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(salesPayload),
+            });
+
+            if (!salesRes.ok) {
+                console.error('Sales API error:', await salesRes.text());
+                throw new Error('Failed to process sales data');
+            }
+
+            const salesData = await salesRes.json();
+            console.log('Sale created:', salesData);
+            
+            // 3. Set order details for receipt and success screen
+            setOrderDetails({
+                order_id: salesData.order_id,
+                customer: customerData,
+                products: cart.map(item => ({
+                    ...item,
+                    discount: item.discount || 0,
+                    subtotal: (item.Unit_MRP || item.unitMrp || item.price) * item.quantity * (1 - (item.discount || 0) / 100)
+                })),
+                payment: {
+                    method: paymentMethod,
+                    subtotal: subtotal,
+                    discount: discount,
+                    total: totalAmount
+                },
+                discount,
+                cartDiscountAmount: subtotal * (discount / 100),
+                store_name: user.store_name,
+                created_at: new Date().toISOString()
+            });
+            
+            setOrderSuccess(true);
+            toast.success('Order placed successfully!');
+            
+        } catch (err) {
+            console.error('Error placing order:', err);
+            toast.error(`Failed to place order: ${err.message}`);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     // Print Receipt - Now using the imported utility
@@ -599,6 +653,26 @@ export const POSProvider = ({ children }) => {
 
     const handleReload = () => window.location.reload();
 
+    // Add discount methods
+    const applyDiscount = (discountPercentage) => {
+        setDiscount(discountPercentage);
+    };
+
+    const clearDiscount = () => {
+        setDiscount(0);
+    };
+
+    // Add method to update item discount
+    const updateItemDiscount = (productId, discount) => {
+        setCart(prevCart =>
+            prevCart.map(item =>
+                item._id === productId
+                    ? { ...item, discount }
+                    : item
+            )
+        );
+    };
+
     const value = {
         // State
         products,
@@ -617,6 +691,7 @@ export const POSProvider = ({ children }) => {
         showCategoryFilter,
         user,
         storeInventory,
+        discount,
 
         // Derived state
         cartQuantity,
@@ -638,7 +713,13 @@ export const POSProvider = ({ children }) => {
         handlePrintReceipt,
         createNewOrder,
         handleReload,
-        filterProductsByCategory
+        filterProductsByCategory,
+        applyDiscount,
+        clearDiscount,
+        updateItemDiscount,
+
+        // New state
+        isInitialized,
     };
 
     return (

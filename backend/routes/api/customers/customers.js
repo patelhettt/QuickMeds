@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const Customer = require('../models/Customer');
 
 // Load environment variables
 require('dotenv').config();
@@ -68,19 +69,47 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-// POST a new customer
+// POST - Find or create customer (without updating existing)
 router.post('/', async (req, res) => {
     try {
-        const newCustomer = req.body;
-
-        if (!validateCustomer(newCustomer)) {
-            return res.status(400).json({ message: "Invalid customer data" });
+        const { name, phone, email, address, store, createdBy } = req.body;
+        
+        console.log('Finding or creating customer:', { name, phone, store });
+        
+        // Check if customer already exists (by phone or email)
+        let existingCustomer = await customersCollection.findOne({ 
+            $or: [
+                { phone: phone },
+                { email: email, email: { $ne: "" } } // Only match on email if it's not empty
+            ],
+            store: store 
+        });
+        
+        if (existingCustomer) {
+            console.log('Found existing customer:', existingCustomer._id);
+            // Return existing customer without updating
+            res.status(200).json(existingCustomer);
+        } else {
+            console.log('Creating new customer');
+            // Create new customer
+            const newCustomer = {
+                name,
+                phone,
+                email: email || '',
+                address: address || '',
+                store,
+                createdBy,
+                createdAt: new Date()
+            };
+            
+            const result = await customersCollection.insertOne(newCustomer);
+            newCustomer._id = result.insertedId;
+            
+            console.log('New customer created with ID:', newCustomer._id);
+            res.status(201).json(newCustomer);
         }
-
-        const result = await customersCollection.insertOne(newCustomer);
-        res.status(201).json({ message: "Customer added successfully", data: result });
     } catch (error) {
-        console.error("Error adding customer:", error.message);
+        console.error("Error finding/creating customer:", error);
         res.status(500).json({ message: "Server error", error: error.message });
     }
 });

@@ -1,11 +1,11 @@
 import React from 'react';
 import EmployeeForm from './EmployeeForm';
 
-const AddEmployeeModal = ({ onSubmit, onCancel, userRole, userCity, userStore }) => {
+const AddEmployeeModal = ({ onSubmit, onCancel, userRole, userCity, userStore, isSuperadmin }) => {
     return (
         <div className="modal-box w-11/12 max-w-5xl mx-auto">
             <div className='flex mb-3'>
-                <h3 className="font-bold text-lg">Add New Employee</h3>
+                <h3 className="font-bold text-lg">{isSuperadmin ? 'Add New Admin' : 'Add New Employee'}</h3>
             </div>
             <EmployeeForm 
                 onSubmit={onSubmit} 
@@ -14,6 +14,8 @@ const AddEmployeeModal = ({ onSubmit, onCancel, userRole, userCity, userStore })
                 userRole={userRole}
                 userCity={userCity}
                 userStore={userStore}
+                isSuperadmin={isSuperadmin}
+                defaultRole={isSuperadmin ? 'admin' : 'employee'}
             />
         </div>
     );

@@ -1,5 +1,46 @@
 import { toast } from 'react-toastify';
 
+// Toast IDs for preventing duplicate notifications
+export const TOAST_IDS = {
+    APPROVAL_SUCCESS: 'order-approval-success',
+    APPROVAL_ERROR: 'order-approval-error',
+    REJECTION_SUCCESS: 'order-rejection-success',
+    REJECTION_ERROR: 'order-rejection-error',
+    AUTH_ERROR: 'order-auth-error'
+};
+
+// Helper function to show toasts with IDs
+export const showToast = (message, type = 'info', toastId) => {
+    // Dismiss any existing toast with this ID to prevent duplicates
+    if (toastId) {
+        toast.dismiss(toastId);
+    }
+    
+    // Configure toast options with longer duration and pausable behavior
+    const toastOptions = {
+        toastId,
+        autoClose: 5000, // 5 seconds duration
+        pauseOnHover: true, // Pause when mouse hovers over toast
+        pauseOnFocusLoss: true, // Pause when window loses focus
+        hideProgressBar: false, // Show progress bar
+        closeOnClick: true, // Allow closing on click
+        draggable: true // Allow dragging toast
+    };
+    
+    // Show the toast with the specified type and options
+    switch(type) {
+        case 'success':
+            return toast.success(message, toastOptions);
+        case 'error':
+            return toast.error(message, { ...toastOptions, autoClose: 7000 }); // Errors stay longer
+        case 'warning':
+            return toast.warning(message, toastOptions);
+        case 'info':
+        default:
+            return toast.info(message, toastOptions);
+    }
+};
+
 // Format date for display
 export const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -70,7 +111,7 @@ export const enrichOrdersWithUserDetails = async (orders) => {
 export const handleApproveOrder = async (orderId, userRole, setIsLoading) => {
     // Only allow superadmin to approve orders
     if (userRole !== 'superadmin') {
-        toast.error('Only superadmins can approve orders');
+        showToast('Only superadmins can approve orders', 'error', TOAST_IDS.AUTH_ERROR);
         return false;
     }
 
@@ -94,14 +135,14 @@ export const handleApproveOrder = async (orderId, userRole, setIsLoading) => {
         const data = await response.json();
         
         if (data.success) {
-            toast.success(data.message || 'Order approved successfully');
+            showToast(data.message || 'Order approved successfully', 'success', TOAST_IDS.APPROVAL_SUCCESS);
             return true;
         } else {
-            toast.error(data.message || 'Failed to approve order');
+            showToast(data.message || 'Failed to approve order', 'error', TOAST_IDS.APPROVAL_ERROR);
             return false;
         }
     } catch (err) {
-        toast.error(`An error occurred: ${err.message}`);
+        showToast(`An error occurred: ${err.message}`, 'error', TOAST_IDS.APPROVAL_ERROR);
         console.error(err);
         return false;
     } finally {
@@ -113,7 +154,7 @@ export const handleApproveOrder = async (orderId, userRole, setIsLoading) => {
 export const handleRejectOrder = async (orderId, userRole) => {
     // Only allow superadmin to reject orders
     if (userRole !== 'superadmin') {
-        toast.error('Only superadmins can reject orders');
+        showToast('Only superadmins can reject orders', 'error', TOAST_IDS.AUTH_ERROR);
         return false;
     }
     
@@ -144,14 +185,14 @@ export const handleRejectOrder = async (orderId, userRole) => {
         const data = await response.json();
         
         if (data.success) {
-            toast.success('Order rejected successfully');
+            showToast('Order rejected successfully', 'success', TOAST_IDS.REJECTION_SUCCESS);
             return true;
         } else {
-            toast.error(data.message || 'Failed to reject order');
+            showToast(data.message || 'Failed to reject order', 'error', TOAST_IDS.REJECTION_ERROR);
             return false;
         }
     } catch (err) {
-        toast.error(`An error occurred: ${err.message}`);
+        showToast(`An error occurred: ${err.message}`, 'error', TOAST_IDS.REJECTION_ERROR);
         console.error(err);
         return false;
     }

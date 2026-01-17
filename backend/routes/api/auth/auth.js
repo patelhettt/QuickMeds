@@ -83,7 +83,7 @@ router.post('/register', async (req, res) => {
 
         // Password validation - 8 chars, uppercase, lowercase, number, special char
         if (!validatePassword(password)) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 message: "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character"
             });
         }
@@ -113,6 +113,7 @@ router.post('/register', async (req, res) => {
             return res.status(400).json({ message: "User already exists" });
         }
 
+
         // Create new user
         const newUser = new User({
             firstName,
@@ -122,15 +123,15 @@ router.post('/register', async (req, res) => {
             phone,
             city,
             store_name,
-            role
+            role: role.toLowerCase()
         });
         await newUser.save();
 
         // Generate JWT Token
         const newToken = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, { expiresIn: "18h" });
 
-        res.status(201).json({ 
-            message: "User registered successfully", 
+        res.status(201).json({
+            message: "User registered successfully",
             token: newToken,
             user: {
                 id: newUser._id,
@@ -204,7 +205,7 @@ router.put('/employees/:id', async (req, res) => {
         }
 
         const { firstName, lastName, email, phone, city, store_name, role } = req.body;
-        
+
         // Get requester information from token
         const token = req.headers.authorization?.replace('Bearer ', '');
         let requesterRole = 'guest';
@@ -269,17 +270,17 @@ router.put('/employees/:id', async (req, res) => {
             if (employeeToUpdate.city !== requesterCity || employeeToUpdate.store_name !== requesterStore) {
                 return res.status(403).json({ message: "Admin can only update employees from their own store" });
             }
-            
+
             // Admin cannot update other admins
             if (employeeToUpdate.role === 'admin') {
                 return res.status(403).json({ message: "Admin cannot update other admin accounts" });
             }
-            
+
             // Admin cannot change an employee's role to admin
             if (role && role !== 'employee') {
                 return res.status(403).json({ message: "Admin can only maintain employee role" });
             }
-            
+
             // Admin cannot change employee's city or store
             if ((city && city !== requesterCity) || (store_name && store_name !== requesterStore)) {
                 return res.status(403).json({ message: "Admin cannot assign employees to a different city or store" });
@@ -355,7 +356,7 @@ router.post('/send-otp', async (req, res) => {
 
         // Generate OTP
         const otp = generateOTP();
-        
+
         // Store OTP in memory with expiry time (10 minutes)
         otpStore[email] = {
             otp,
@@ -381,7 +382,7 @@ router.post('/send-otp', async (req, res) => {
 router.post('/verify-otp', async (req, res) => {
     try {
         const { email, otp } = req.body;
-        
+
         // Check if OTP exists and is valid
         if (!otpStore[email] || otpStore[email].otp !== otp || otpStore[email].expiresAt < new Date()) {
             return res.status(400).json({ message: 'Invalid or expired OTP' });
@@ -389,7 +390,7 @@ router.post('/verify-otp', async (req, res) => {
 
         // Delete the OTP after use
         delete otpStore[email];
-        
+
         res.status(200).json({ message: 'OTP verified successfully' });
     } catch (error) {
         console.error('Error verifying OTP:', error);
@@ -398,18 +399,18 @@ router.post('/verify-otp', async (req, res) => {
 });
 
 // Password Routes
-router.post('/forgot-password', async(req, res) => {
+router.post('/forgot-password', async (req, res) => {
     try {
         const { email } = req.body;
         const user = await User.findOne({ email });
 
-        if(!user) {
+        if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
 
         // Generate OTP
         const otp = generateOTP();
-        
+
         // Store OTP in memory with expiry time (10 minutes)
         otpStore[email] = {
             otp,
@@ -426,7 +427,7 @@ router.post('/forgot-password', async(req, res) => {
 
         await transporter.sendMail(mailOptions);
         res.status(200).json({ message: 'Password reset OTP sent successfully' });
-    } catch(error) {
+    } catch (error) {
         console.error('Error in forgot password:', error);
         res.status(500).json({ message: 'Error processing forgot password request' });
     }

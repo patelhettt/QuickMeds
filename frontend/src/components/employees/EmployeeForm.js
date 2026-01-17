@@ -3,7 +3,17 @@ import Input from '../../components/form/Input';
 import SaveButton from '../../components/buttons/SaveButton';
 import CancelButton from '../../components/buttons/CancelButton';
 
-const EmployeeForm = ({ employee, onSubmit, onCancel, isEditing = false, userRole, userCity, userStore }) => {
+const EmployeeForm = ({ 
+    employee, 
+    onSubmit, 
+    onCancel, 
+    isEditing = false, 
+    userRole, 
+    userCity, 
+    userStore,
+    isSuperadmin = false,
+    defaultRole
+}) => {
     const [formErrors, setFormErrors] = useState({});
     const [formData, setFormData] = useState({
         firstName: isEditing && employee ? employee.firstName || '' : '',
@@ -12,12 +22,12 @@ const EmployeeForm = ({ employee, onSubmit, onCancel, isEditing = false, userRol
         phone: isEditing && employee ? employee.phone || '' : '',
         city: userRole === 'admin' ? userCity : (isEditing && employee ? employee.city || '' : ''),
         store_name: userRole === 'admin' ? userStore : (isEditing && employee ? employee.store_name || '' : ''),
-        role: userRole === 'admin' ? 'employee' : (isEditing && employee ? employee.role || 'employee' : 'employee'),
+        role: isSuperadmin ? 'admin' : (userRole === 'admin' ? 'employee' : (isEditing && employee ? employee.role || 'employee' : 'employee')),
         password: '',
         confirmPassword: ''
     });
 
-    // Update form data if employee prop changes
+    // Update form data if employee prop changes or if defaultRole is provided
     useEffect(() => {
         if (isEditing && employee) {
             setFormData({
@@ -27,12 +37,12 @@ const EmployeeForm = ({ employee, onSubmit, onCancel, isEditing = false, userRol
                 phone: employee.phone || '',
                 city: userRole === 'admin' ? userCity : (employee.city || ''),
                 store_name: userRole === 'admin' ? userStore : (employee.store_name || ''),
-                role: userRole === 'admin' ? 'employee' : (employee.role || 'employee'),
+                role: isSuperadmin ? 'admin' : (userRole === 'admin' ? 'employee' : (employee.role || 'employee')),
                 password: '',
                 confirmPassword: ''
             });
         } else if (!isEditing) {
-            // For add employee, ensure admin values are set
+            // For add employee, ensure appropriate values are set
             if (userRole === 'admin') {
                 setFormData(prev => ({
                     ...prev,
@@ -40,9 +50,19 @@ const EmployeeForm = ({ employee, onSubmit, onCancel, isEditing = false, userRol
                     store_name: userStore,
                     role: 'employee'
                 }));
+            } else if (isSuperadmin) {
+                setFormData(prev => ({
+                    ...prev,
+                    role: 'admin'
+                }));
+            } else if (defaultRole) {
+                setFormData(prev => ({
+                    ...prev,
+                    role: defaultRole
+                }));
             }
         }
-    }, [employee, isEditing, userRole, userCity, userStore]);
+    }, [employee, isEditing, userRole, userCity, userStore, isSuperadmin, defaultRole]);
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -91,7 +111,7 @@ const EmployeeForm = ({ employee, onSubmit, onCancel, isEditing = false, userRol
             }
         }
         
-        // City validation for all users
+        // City validation for all users except superadmin
         if (!formData.city.trim()) {
             errors.city = "City is required";
         } else if (userRole === 'admin' && formData.city !== userCity) {
@@ -99,7 +119,7 @@ const EmployeeForm = ({ employee, onSubmit, onCancel, isEditing = false, userRol
             errors.city = "As an admin, you can only add employees to your city";
         }
         
-        // Store validation for all users
+        // Store validation for all users except superadmin
         if (!formData.store_name.trim()) {
             errors.store_name = "Store name is required";
         } else if (userRole === 'admin' && formData.store_name !== userStore) {
@@ -145,6 +165,8 @@ const EmployeeForm = ({ employee, onSubmit, onCancel, isEditing = false, userRol
             errors.role = "Role is required";
         } else if (userRole === 'admin' && formData.role !== 'employee') {
             errors.role = "Admin users can only create employee accounts";
+        } else if (isSuperadmin && formData.role !== 'admin') {
+            errors.role = "Superadmin can only create admin accounts";
         }
         
         return errors;
@@ -153,12 +175,16 @@ const EmployeeForm = ({ employee, onSubmit, onCancel, isEditing = false, userRol
     const handleSubmit = (e) => {
         e.preventDefault();
         
-        // Force city and store to userCity and userStore for admin users
+        // Prepare submission data
         const submissionData = { ...formData };
+        
+        // Force values based on user role
         if (userRole === 'admin') {
             submissionData.city = userCity;
             submissionData.store_name = userStore;
             submissionData.role = 'employee';
+        } else if (isSuperadmin) {
+            submissionData.role = 'admin';
         }
         
         const errors = validateForm();
@@ -175,6 +201,11 @@ const EmployeeForm = ({ employee, onSubmit, onCancel, isEditing = false, userRol
                 firstErrorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
         }
+    };
+    
+    // Helper function to determine if role selection should be disabled
+    const isRoleSelectionDisabled = () => {
+        return userRole === 'admin' || isSuperadmin || isEditing;
     };
     
     return (
@@ -348,29 +379,42 @@ const EmployeeForm = ({ employee, onSubmit, onCancel, isEditing = false, userRol
                     </>
                 )}
                 
-                {/* Role Selection */}
-                <div className="form-control">
-                    <label className="label">
-                        <span className="label-text">Role</span>
+                {/* Role (disabled for admin users and superadmin) */}
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Role <span className="text-red-500">*</span>
                     </label>
-                    <select 
-                        name="role" 
-                        className="select select-bordered w-full" 
+                    <select
+                        name="role"
+                        className="input input-bordered w-full"
                         value={formData.role}
                         onChange={handleInputChange}
-                        disabled={userRole === 'admin'} // Admin can only create employees
+                        disabled={isRoleSelectionDisabled()}
                     >
-                        <option value="">Select Role</option>
-                        {userRole !== 'admin' && <option value="admin">Admin</option>}
-                        <option value="employee">Employee</option>
+                        <option value="">Select a role</option>
+                        {isSuperadmin ? (
+                            <option value="admin">Admin</option>
+                        ) : userRole === 'admin' ? (
+                            <option value="employee">Employee</option>
+                        ) : (
+                            <>
+                                <option value="admin">Admin</option>
+                                <option value="employee">Employee</option>
+                            </>
+                        )}
                     </select>
-                    {userRole === 'admin' && (
-                        <p className="text-xs text-gray-500 mt-1">
-                            As an admin, you can only create employee accounts
-                        </p>
-                    )}
                     {formErrors.role && (
                         <p className="text-xs text-red-500 mt-1">{formErrors.role}</p>
+                    )}
+                    
+                    {isRoleSelectionDisabled() && (
+                        <p className="text-xs text-blue-500 mt-1">
+                            {isSuperadmin 
+                                ? "As a superadmin, you can only create admin accounts" 
+                                : userRole === 'admin' 
+                                    ? "As an admin, you can only create employee accounts" 
+                                    : "Role cannot be changed once set"}
+                        </p>
                     )}
                 </div>
             </div>

@@ -94,7 +94,7 @@ router.post('/auth/register', async (req, res) => {
             lastName,
             email,
             password: hashedPassword,
-            role
+            role: role.toLowerCase() // Store role in lowercase
         });
 
         res.status(201).json({ message: "Employee added successfully", userId: result.insertedId });
@@ -104,17 +104,41 @@ router.post('/auth/register', async (req, res) => {
 });
 
 // DELETE an employee by ID
-router.delete('/:id', checkRole('admin'), async (req, res) => {
+router.delete('/:id', checkRole('superadmin') || checkRole('admin'), async (req, res) => {
     try {
         const { id } = req.params;
-        if (!ObjectId.isValid(id)) return res.status(400).json({ message: "Invalid employee ID" });
+
+        if (!ObjectId.isValid(id)) {
+            return res.status(400).json({ message: "Invalid user ID" });
+        }
+
+        // Check if trying to delete self
+        if (req.userId === id) {
+            return res.status(403).json({ message: "Cannot delete your own account" });
+        }
+
+        // Find the user to be deleted
+        const userToDelete = await userCollection.findOne({ _id: new ObjectId(id) });
+        
+        if (!userToDelete) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        // Only allow deleting admin users
+        if (userToDelete.role.toLowerCase() !== 'admin') {
+            return res.status(403).json({ message: "Can only delete admin users" });
+        }
 
         const result = await userCollection.deleteOne({ _id: new ObjectId(id) });
-        if (!result.deletedCount) return res.status(404).json({ message: `Employee with ID ${id} not found` });
 
-        res.status(200).json({ message: "Employee deleted successfully" });
+        if (result.deletedCount === 0) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        res.json({ message: "User deleted successfully" });
     } catch (error) {
-        res.status(500).json({ message: "Server error" });
+        console.error("Delete error:", error);
+        res.status(500).json({ message: "Server error", error: error.message });
     }
 });
 
@@ -125,20 +149,23 @@ router.delete('/:id', checkRole('admin'), async (req, res) => {
 router.put('/:id', checkRole('admin'), async (req, res) => {
     try {
         const { id } = req.params;
-        const updateData = req.body;
+        const updateData = { ...req.body };
 
         if (!ObjectId.isValid(id)) {
             return res.status(400).json({ message: "Invalid employee ID" });
         }
 
+        // Ensure role is lowercase if it's being updated
+        if (updateData.role) {
+            updateData.role = updateData.role.toLowerCase();
+        }
+
         // Handle password update if provided
         if (updateData.password) {
-            // Hash the new password
             const hashedPassword = await bcrypt.hash(updateData.password, 10);
             updateData.password = hashedPassword;
         }
 
-        // Use userCollection instead of User model
         const result = await userCollection.updateOne(
             { _id: new ObjectId(id) },
             { $set: updateData }
@@ -170,7 +197,7 @@ router.put('/:id', checkRole('admin'), async (req, res) => {
 router.put('/:id/role', checkRole('admin'), async (req, res) => {
     try {
         const { id } = req.params;
-        const { role } = req.body;
+        const role = (req.body.role || '').toLowerCase(); // Convert role to lowercase
 
         if (!ObjectId.isValid(id)) return res.status(400).json({ message: "Invalid employee ID" });
 
